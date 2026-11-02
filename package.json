@@ -1,0 +1,24 @@
+{
+  "name": "salonai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "settings:sql": "node scripts/render-platform-sql.mjs",
+    "supabase:check": "node scripts/check-supabase.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "supabase": "^2.58.5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.86.0",
+    "next": "^15.5.28",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

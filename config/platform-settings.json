@@ -1,0 +1,405 @@
+{
+  "version": "2026-11-02",
+  "label": "임의 기본값",
+  "currency": "KRW",
+  "timezone": "Asia/Seoul",
+  "flags": {
+    "pgEnabled": false,
+    "naverApiEnabled": false,
+    "externalBookingMode": "manual_block",
+    "paymentRecordMode": "manual",
+    "kakaoChannelMode": "single_shared",
+    "copyTemplatesOnStoreCreate": true
+  },
+  "clients": {
+    "staff": "native_app",
+    "assistant": "native_app",
+    "customer": "native_app",
+    "owner": "web",
+    "operator": "web"
+  },
+  "operations": {
+    "slotIntervalMinutes": 30,
+    "slotHoldMinutes": 5,
+    "requestResponseMinutes": 120,
+    "requestTimeoutAction": "expire",
+    "autoConfirmRequest": false,
+    "customerCancelFreeUntilHours": 24,
+    "lateCancelAllowed": true,
+    "lateCancelFeeKrw": 0,
+    "noShowAction": "mark_only",
+    "minAge": 14,
+    "sendLocalTime": "10:00",
+    "quietHours": {
+      "start": "21:00",
+      "end": "08:00",
+      "releaseAt": "08:30"
+    },
+    "notificationCaps": {
+      "maxPerDay": 2,
+      "maxPer7Days": 5,
+      "cappedTemplateCodes": ["CARE_TIP", "REVISIT_D3"]
+    },
+    "notificationChannelOrder": ["push", "alimtalk", "sms"],
+    "record": {
+      "photoSkipCreatesDraft": true,
+      "allowTextOnlyShare": true,
+      "staffApprovalBeforeShare": true,
+      "draftReminderHoursAfterComplete": [3, 20],
+      "stripExif": true,
+      "signedUrl": true
+    }
+  },
+  "defaultHours": {
+    "mon": ["10:00", "20:00"],
+    "tue": ["10:00", "20:00"],
+    "wed": ["10:00", "20:00"],
+    "thu": ["10:00", "20:00"],
+    "fri": ["10:00", "20:00"],
+    "sat": ["10:00", "20:00"],
+    "sun": ["10:00", "20:00"]
+  },
+  "retention": {
+    "deleteAfterWithdrawGraceDays": 30,
+    "legalHoldSeparated": true
+  },
+  "ai": {
+    "requiresStaffApproval": true,
+    "excludePrivateMemo": true,
+    "excludeIdentifiers": true,
+    "photosAsInput": false
+  },
+  "onboardingChecklist": [
+    { "id": "hours", "label": "영업시간" },
+    { "id": "menus", "label": "메뉴·소요시간" },
+    { "id": "staff", "label": "담당자 초대" },
+    { "id": "notices", "label": "알림 문구 확인" },
+    { "id": "import", "label": "기존 고객 파일" }
+  ],
+  "paymentRecord": {
+    "manyPerVisit": true,
+    "fields": ["amount_krw", "service_name", "entry_type", "method_label", "note"],
+    "entryTypes": [
+      { "id": "paid", "label": "수납" },
+      { "id": "refund", "label": "환불" },
+      { "id": "partial_refund", "label": "부분 환불" }
+    ],
+    "methodLabels": [
+      { "id": "cash", "label": "현금" },
+      { "id": "card_terminal", "label": "카드 단말기" },
+      { "id": "naver_pay", "label": "네이버페이(매장 수기)" },
+      { "id": "transfer", "label": "계좌이체" },
+      { "id": "other", "label": "기타" }
+    ]
+  },
+  "externalBlock": {
+    "maxSteps": 3,
+    "steps": ["날짜와 시작·종료 시간", "출처와 담당자", "반복 여부와 저장"],
+    "sources": [
+      { "id": "naver", "label": "네이버" },
+      { "id": "phone", "label": "전화" },
+      { "id": "other", "label": "기타" }
+    ],
+    "repeat": [
+      { "id": "none", "label": "반복 없음" },
+      { "id": "weekly", "label": "매주" }
+    ]
+  },
+  "categories": [
+    {
+      "id": "hair",
+      "name": "헤어",
+      "sortOrder": 1,
+      "recordFields": [
+        { "key": "before_photo", "label": "시술 전 사진", "fieldType": "photo", "required": false, "shareable": true, "defaultShared": true, "aiInput": false, "sortOrder": 1 },
+        { "key": "after_photo", "label": "시술 후 사진", "fieldType": "photo", "required": false, "shareable": true, "defaultShared": true, "aiInput": false, "sortOrder": 2 },
+        { "key": "formula", "label": "사용 제품·약제", "fieldType": "text", "required": false, "shareable": true, "defaultShared": false, "aiInput": true, "sortOrder": 3 },
+        { "key": "color", "label": "컬러", "fieldType": "text", "required": false, "shareable": true, "defaultShared": false, "aiInput": true, "sortOrder": 4 },
+        { "key": "public_note", "label": "고객 안내", "fieldType": "long_text", "required": false, "shareable": true, "defaultShared": true, "aiInput": true, "sortOrder": 5 },
+        { "key": "private_note", "label": "내부 메모", "fieldType": "long_text", "required": false, "shareable": false, "defaultShared": false, "aiInput": false, "sortOrder": 6 }
+      ],
+      "preQuestions": [
+        { "id": "hair_chemical", "prompt": "최근 염색, 펌, 탈색을 한 시기와 종류를 적어 주세요.", "sensitive": true, "required": false, "aiInput": true, "sortOrder": 1 },
+        { "id": "hair_allergy", "prompt": "두피 트러블이나 염색약 알레르기가 있으면 적어 주세요.", "sensitive": true, "required": false, "aiInput": true, "sortOrder": 2 },
+        { "id": "hair_wish", "prompt": "이번에 원하는 방향을 적어 주세요.", "sensitive": false, "required": false, "aiInput": true, "sortOrder": 3 }
+      ],
+      "menus": [
+        { "id": "hair_cut_w", "name": "여성 커트", "priceKrw": 30000, "durationMin": 40, "revisitCycleDays": 42, "sortOrder": 1, "notifications": [{ "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "hair_cut_m", "name": "남성 커트", "priceKrw": 20000, "durationMin": 30, "revisitCycleDays": 28, "sortOrder": 2, "notifications": [{ "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "hair_bang", "name": "앞머리 커트", "priceKrw": 10000, "durationMin": 15, "revisitCycleDays": null, "sortOrder": 3, "notifications": [] },
+        { "id": "hair_dry", "name": "드라이", "priceKrw": 25000, "durationMin": 30, "revisitCycleDays": null, "sortOrder": 4, "notifications": [] },
+        { "id": "hair_root", "name": "뿌리염색", "priceKrw": 70000, "durationMin": 90, "revisitCycleDays": 42, "sortOrder": 5, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 7, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "hair_color", "name": "염색", "priceKrw": 90000, "durationMin": 120, "revisitCycleDays": 49, "sortOrder": 6, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 7, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 14, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "hair_bleach", "name": "탈색", "priceKrw": 150000, "durationMin": 180, "revisitCycleDays": 56, "sortOrder": 7, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 7, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 14, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "hair_perm", "name": "펌", "priceKrw": 130000, "durationMin": 150, "revisitCycleDays": 56, "sortOrder": 8, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 7, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 14, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "hair_clinic", "name": "클리닉", "priceKrw": 80000, "durationMin": 60, "revisitCycleDays": 28, "sortOrder": 9, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "offset_days", "days": 7, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] }
+      ]
+    },
+    {
+      "id": "nail",
+      "name": "네일",
+      "sortOrder": 2,
+      "recordFields": [
+        { "key": "before_photo", "label": "시술 전 사진", "fieldType": "photo", "required": false, "shareable": true, "defaultShared": true, "aiInput": false, "sortOrder": 1 },
+        { "key": "after_photo", "label": "시술 후 사진", "fieldType": "photo", "required": false, "shareable": true, "defaultShared": true, "aiInput": false, "sortOrder": 2 },
+        { "key": "design", "label": "디자인·파츠", "fieldType": "text", "required": false, "shareable": true, "defaultShared": true, "aiInput": true, "sortOrder": 3 },
+        { "key": "color", "label": "컬러", "fieldType": "text", "required": false, "shareable": true, "defaultShared": true, "aiInput": true, "sortOrder": 4 },
+        { "key": "public_note", "label": "고객 안내", "fieldType": "long_text", "required": false, "shareable": true, "defaultShared": true, "aiInput": true, "sortOrder": 5 },
+        { "key": "private_note", "label": "내부 메모", "fieldType": "long_text", "required": false, "shareable": false, "defaultShared": false, "aiInput": false, "sortOrder": 6 }
+      ],
+      "preQuestions": [
+        { "id": "nail_allergy", "prompt": "젤이나 아세톤 알레르기가 있으면 적어 주세요.", "sensitive": true, "required": false, "aiInput": true, "sortOrder": 1 },
+        { "id": "nail_condition", "prompt": "깨짐, 들뜸처럼 지금 네일 상태를 적어 주세요.", "sensitive": true, "required": false, "aiInput": true, "sortOrder": 2 },
+        { "id": "nail_wish", "prompt": "원하는 디자인이나 유지 기간을 적어 주세요.", "sensitive": false, "required": false, "aiInput": true, "sortOrder": 3 }
+      ],
+      "menus": [
+        { "id": "nail_gel", "name": "젤 원컬러", "priceKrw": 50000, "durationMin": 60, "revisitCycleDays": 21, "sortOrder": 1, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "nail_art", "name": "젤 아트", "priceKrw": 70000, "durationMin": 90, "revisitCycleDays": 21, "sortOrder": 2, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "nail_pedi", "name": "페디 젤", "priceKrw": 65000, "durationMin": 70, "revisitCycleDays": 28, "sortOrder": 3, "notifications": [{ "scheduleType": "offset_days", "days": 1, "templateCode": "CARE_TIP", "priority": 20 }, { "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "nail_care", "name": "네일 케어", "priceKrw": 30000, "durationMin": 40, "revisitCycleDays": 21, "sortOrder": 4, "notifications": [{ "scheduleType": "before_cycle", "days": 3, "templateCode": "REVISIT_D3", "priority": 10 }] },
+        { "id": "nail_remove", "name": "젤 제거", "priceKrw": 15000, "durationMin": 20, "revisitCycleDays": null, "sortOrder": 5, "notifications": [] }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "code": "RSV_CONFIRMED",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "예약 확정",
+      "countsTowardCap": false,
+      "variables": ["매장명", "고객명", "일시", "시술명", "링크"],
+      "body": "[#{매장명}] 예약이 확정되었습니다.\n#{고객명}님, #{일시} #{시술명} 예약이 확정되었습니다.\n변경이나 취소는 방문 24시간 전까지 아래에서 할 수 있습니다.",
+      "buttons": [{ "name": "예약 확인", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "RSV_REJECTED",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "예약 거절",
+      "countsTowardCap": false,
+      "variables": ["매장명", "고객명", "일시", "시술명", "사유", "링크"],
+      "body": "[#{매장명}] 예약 요청을 진행하기 어렵습니다.\n#{고객명}님, #{일시} #{시술명} 요청은 확정되지 않았습니다.\n#{사유}",
+      "buttons": [{ "name": "다른 시간 보기", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "RSV_ALT_TIME",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "시간 제안",
+      "countsTowardCap": false,
+      "variables": ["매장명", "고객명", "일시", "제안일시", "시술명", "링크"],
+      "body": "[#{매장명}] 다른 시간을 제안드립니다.\n#{고객명}님, 요청하신 #{일시} 대신 #{제안일시}에 #{시술명}이 가능합니다.",
+      "buttons": [{ "name": "제안 확인", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "RSV_REMIND_D1",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "방문 하루 전",
+      "countsTowardCap": false,
+      "variables": ["매장명", "고객명", "일시", "시술명", "링크"],
+      "body": "[#{매장명}] 내일 예약이 있습니다.\n#{고객명}님, #{일시} #{시술명} 예약이 있습니다.",
+      "buttons": [{ "name": "예약 확인", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "PRE_QUESTION",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "사전 질문",
+      "countsTowardCap": false,
+      "variables": ["매장명", "고객명", "시술명", "링크"],
+      "body": "[#{매장명}] 시술 전 확인이 있습니다.\n#{고객명}님, #{시술명} 전에 질문 몇 가지에 답해 주세요. 앱이 없어도 링크에서 응답할 수 있습니다.",
+      "buttons": [{ "name": "질문 답하기", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "RECORD_SHARED",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "기록 공유",
+      "countsTowardCap": false,
+      "variables": ["매장명", "고객명", "시술명", "링크"],
+      "body": "[#{매장명}] 시술 기록이 추가되었습니다.\n#{고객명}님, #{시술명} 기록을 내 기록에서 볼 수 있습니다.",
+      "buttons": [{ "name": "기록 보기", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "CARE_TIP",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "시술 후 케어",
+      "countsTowardCap": true,
+      "variables": ["매장명", "고객명", "시술명", "경과일", "내용", "링크"],
+      "body": "[#{매장명}] 시술 후 안내입니다.\n#{고객명}님, #{시술명} #{경과일}일차 안내입니다.\n#{내용}",
+      "buttons": [{ "name": "안내 보기", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "REVISIT_D3",
+      "channel": "alimtalk",
+      "audience": "customer",
+      "name": "재방문 3일 전",
+      "countsTowardCap": true,
+      "variables": ["매장명", "고객명", "시술명", "링크"],
+      "body": "[#{매장명}] 다음 방문일이 다가왔습니다.\n#{고객명}님, #{시술명} 권장 방문일이 3일 남았습니다.",
+      "buttons": [{ "name": "예약하기", "type": "WL", "url": "#{링크}" }]
+    },
+    {
+      "code": "STAFF_NEW_REQUEST",
+      "channel": "push",
+      "audience": "staff",
+      "name": "예약 요청",
+      "countsTowardCap": false,
+      "variables": ["고객명", "시술명", "일시", "응답기한"],
+      "body": "#{고객명}님 #{시술명} 예약 요청이 있습니다. #{일시}. #{응답기한}까지 확정, 거절, 시간 제안 중 하나를 선택해 주세요.",
+      "buttons": []
+    },
+    {
+      "code": "STAFF_DRAFT_REMINDER",
+      "channel": "push",
+      "audience": "staff",
+      "name": "보관함 리마인더",
+      "countsTowardCap": false,
+      "variables": ["고객명", "시술명"],
+      "body": "#{고객명}님 #{시술명} 기록이 사진 없이 보관함에 있습니다.",
+      "buttons": []
+    }
+  ],
+  "consents": [
+    {
+      "code": "terms",
+      "title": "서비스 이용약관",
+      "required": true,
+      "prechecked": false,
+      "timing": "signup",
+      "version": "2026-11-02",
+      "body": "SALONAI는 매장 예약, 시술 기록, 고객 알림을 제공합니다.\n만 14세 미만은 가입할 수 없습니다.\n예약의 확정, 변경, 취소는 매장 설정과 이 약관의 시간 규칙을 따릅니다. 고객은 방문 24시간 전까지 예약을 취소할 수 있습니다. 그 이후의 취소와 노쇼는 매장이 상태로 기록하며, 1차에서는 위약금을 청구하지 않습니다.\n결제 대행은 제공하지 않습니다. 매출에 남는 금액, 시술명, 환불 여부는 매장이 직접 입력합니다.\n시술 기록은 담당자가 작성하고, 담당자가 확인한 뒤에만 고객에게 공유됩니다. 글만으로도 공유할 수 있습니다.\n고객은 매장별로 기록 공개 범위를 바꿀 수 있고, 철회는 바로 반영됩니다. 매장 내부 메모는 고객과 다른 매장에 보이지 않습니다.\n탈퇴는 진행 중인 예약이 없을 때 접수됩니다. 30일이 지나면 파기하고, 법령상 보관이 필요한 기록은 분리 보관합니다."
+    },
+    {
+      "code": "privacy",
+      "title": "개인정보 처리",
+      "required": true,
+      "prechecked": false,
+      "timing": "signup",
+      "version": "2026-11-02",
+      "body": "수집 항목은 계정 식별자, 이름, 휴대폰 번호, 소셜 로그인 식별자, 본인인증 결과(CI), 예약과 방문 정보, 시술 기록, 사진, 사전 질문 답변, 알림 수신 기록, 매장이 입력한 금액·시술명·환불 여부입니다. 카드번호는 보관하지 않습니다.\n목적은 회원 식별, 예약 수행, 기록 보관과 공유, 알림 발송, 매출 집계, 분쟁 처리입니다.\n사진에 포함된 위치정보(EXIF)는 업로드할 때 제거합니다. 파일은 비공개로 저장하고, 시간이 지나면 만료되는 링크로만 보여 줍니다.\n고객이 연결한 매장에만 예약과, 고객이 연 범위의 기록을 제공합니다. 다른 매장에는 제공하지 않습니다.\n알림 발송 대행사, 클라우드 운영, 본인인증, 기록 요약 AI에 처리를 맡길 수 있습니다. 내부 메모, 이름, 연락처, 사진은 AI 입력에서 뺍니다.\n탈퇴 후 30일이 지나면 파기합니다. 법령상 보관 의무가 있는 항목은 그 기간 동안 분리 보관합니다.\n이용자는 자신의 정보를 열람, 정정, 내려받기, 삭제, 처리정지할 수 있습니다."
+    },
+    {
+      "code": "service_notice",
+      "title": "예약·기록 알림",
+      "required": true,
+      "prechecked": false,
+      "timing": "signup",
+      "version": "2026-11-02",
+      "body": "예약 접수, 확정, 거절, 시간 제안, 방문 하루 전 안내, 사전 질문, 기록 공유처럼 예약과 기록을 제공하는 데 필요한 알림을 보냅니다.\n앱이 있으면 푸시가 먼저 가고, 없으면 카카오 알림톡, 그것도 실패하면 문자로 보냅니다. 발신 채널은 매장별 채널이 아니라 SALONAI 공통 채널 하나입니다. 본문에 매장명이 들어갑니다.\n21시부터 다음 날 8시까지는 보내지 않고, 8시 30분으로 미룹니다."
+    },
+    {
+      "code": "care_revisit",
+      "title": "케어·재방문 알림",
+      "required": false,
+      "prechecked": false,
+      "timing": "store_connect",
+      "version": "2026-11-02",
+      "body": "시술 종류에 맞춘 홈케어 안내와 재방문 안내를 보냅니다. 동의하지 않아도 예약과 기록 이용은 가능합니다.\n같은 매장에서 케어와 재방문 안내를 합쳐 하루 2건, 7일에 5건을 넘기지 않습니다. 예약 확정처럼 예약 진행에 필요한 알림은 이 횟수에 넣지 않습니다.\n매장 연결 화면에서 언제든 철회할 수 있습니다."
+    },
+    {
+      "code": "marketing",
+      "title": "마케팅 수신",
+      "required": false,
+      "prechecked": false,
+      "timing": "store_connect",
+      "version": "2026-11-02",
+      "body": "이벤트와 프로모션 안내를 받을 수 있습니다. 동의하지 않아도 예약, 기록, 케어 안내 설정은 그대로입니다. 언제든 철회할 수 있습니다."
+    },
+    {
+      "code": "sensitive",
+      "title": "사전 질문 민감정보",
+      "required": true,
+      "prechecked": false,
+      "timing": "pre_question",
+      "version": "2026-11-02",
+      "body": "알레르기, 두피나 네일 상태, 최근 화학 시술 이력처럼 건강에 가까운 답변은 그 매장의 시술 안전과 상담에만 씁니다.\n해당 매장의 담당자와 점주만 봅니다. 다른 매장과 보조 인력에게는 보이지 않습니다.\n동의한 답변은 주의 항목을 요약하는 데 쓰일 수 있습니다. 이름, 연락처, 사진은 요약 입력에 넣지 않습니다.\n민감 질문에 답하지 않아도 예약을 진행할 수 있습니다. 이미 보낸 답변은 삭제할 수 있습니다."
+    }
+  ],
+  "permissions": [
+    { "role": "customer", "resource": "profile", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "profile", "action": "write", "scope": "self" },
+    { "role": "customer", "resource": "consent", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "consent", "action": "write", "scope": "self" },
+    { "role": "customer", "resource": "visit", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "visit", "action": "cancel", "scope": "self" },
+    { "role": "customer", "resource": "record_shared", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "self_note", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "self_note", "action": "write", "scope": "self" },
+    { "role": "customer", "resource": "share_setting", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "share_setting", "action": "write", "scope": "self" },
+    { "role": "customer", "resource": "pre_answer", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "pre_answer", "action": "write", "scope": "self" },
+    { "role": "customer", "resource": "payment_record", "action": "read", "scope": "self" },
+    { "role": "customer", "resource": "notification", "action": "read", "scope": "self" },
+
+    { "role": "assistant", "resource": "visit", "action": "read", "scope": "store" },
+    { "role": "assistant", "resource": "visit", "action": "check_in", "scope": "store" },
+    { "role": "assistant", "resource": "photo", "action": "write", "scope": "store" },
+    { "role": "assistant", "resource": "record_draft", "action": "write", "scope": "store" },
+    { "role": "assistant", "resource": "customer_brief", "action": "read", "scope": "store" },
+
+    { "role": "staff", "resource": "visit", "action": "read", "scope": "store" },
+    { "role": "staff", "resource": "visit", "action": "write", "scope": "assigned" },
+    { "role": "staff", "resource": "record", "action": "read", "scope": "store" },
+    { "role": "staff", "resource": "record", "action": "write", "scope": "assigned" },
+    { "role": "staff", "resource": "record", "action": "approve_share", "scope": "assigned" },
+    { "role": "staff", "resource": "private_memo", "action": "read", "scope": "store" },
+    { "role": "staff", "resource": "private_memo", "action": "write", "scope": "store" },
+    { "role": "staff", "resource": "photo", "action": "read", "scope": "store" },
+    { "role": "staff", "resource": "photo", "action": "write", "scope": "assigned" },
+    { "role": "staff", "resource": "pre_answer", "action": "read", "scope": "store" },
+    { "role": "staff", "resource": "payment_record", "action": "read", "scope": "assigned" },
+    { "role": "staff", "resource": "payment_record", "action": "write", "scope": "assigned" },
+    { "role": "staff", "resource": "customer", "action": "read", "scope": "store" },
+    { "role": "staff", "resource": "notification", "action": "read", "scope": "assigned" },
+
+    { "role": "owner", "resource": "visit", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "visit", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "visit", "action": "correct_status", "scope": "store" },
+    { "role": "owner", "resource": "record", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "record", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "record", "action": "approve_share", "scope": "store" },
+    { "role": "owner", "resource": "private_memo", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "private_memo", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "photo", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "photo", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "pre_answer", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "payment_record", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "payment_record", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "customer", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "customer", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "menu", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "menu", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "store_settings", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "store_settings", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "staff_membership", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "staff_membership", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "notification_rule", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "notification_rule", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "external_block", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "external_block", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "import_job", "action": "read", "scope": "store" },
+    { "role": "owner", "resource": "import_job", "action": "write", "scope": "store" },
+    { "role": "owner", "resource": "sales_report", "action": "read", "scope": "store" },
+
+    { "role": "operator", "resource": "store_application", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "store_application", "action": "write", "scope": "platform" },
+    { "role": "operator", "resource": "account", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "account", "action": "suspend", "scope": "platform" },
+    { "role": "operator", "resource": "menu_template", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "menu_template", "action": "write", "scope": "platform" },
+    { "role": "operator", "resource": "message_template", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "message_template", "action": "write", "scope": "platform" },
+    { "role": "operator", "resource": "consent_document", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "consent_document", "action": "write", "scope": "platform" },
+    { "role": "operator", "resource": "notification_rule_template", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "notification_rule_template", "action": "write", "scope": "platform" },
+    { "role": "operator", "resource": "audit", "action": "read", "scope": "platform" },
+    { "role": "operator", "resource": "record", "action": "read", "scope": "platform_audited" },
+    { "role": "operator", "resource": "monitoring", "action": "read", "scope": "platform" }
+  ]
+}
