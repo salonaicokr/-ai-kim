@@ -1,0 +1,132 @@
+/* S14 구성원 · 권한 */
+.mb-page{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mb-page .lead{max-width:760px;line-height:1.6;font-size:12.5px}
+.sm-btn{min-height:34px;padding:6px 12px;font-size:12.5px}
+.inv{display:flex;flex-direction:column;gap:12px}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mb-card{padding:0;min-width:0}
+.tw{overflow-x:auto}
+.pt{border-collapse:collapse;width:100%;min-width:1100px;font-size:12.5px}
+.pt th{background:#f7f6f3;color:var(--c-text-sub);font-weight:800;font-size:11px;padding:6px 6px;border-bottom:1px solid var(--c-line);text-align:center;white-space:nowrap}
+.pt th.grp{font-size:11.5px;color:var(--c-ink);border-left:2px solid #fff}
+.pt th.pk{white-space:normal;line-height:1.25;min-width:64px;font-weight:700}
+.pt th.who,.pt td.who{position:sticky;left:0;background:#fff;text-align:left;z-index:1;min-width:170px;box-shadow:1px 0 0 var(--c-line)}
+.pt th.who{background:#f7f6f3}
+.pt td{border-top:1px solid #f1f0ee;padding:8px 4px;vertical-align:middle}
+.pt td.who{padding:10px 12px}
+.pt tr.invited td{background:#fffbea}.pt tr.invited td.who{background:#fffbea}
+.who .nm{font-size:14px;font-weight:900;display:flex;align-items:center;gap:6px}
+.me{font-size:10px;font-weight:800;background:var(--c-ink);color:#fff;border-radius:999px;padding:1px 6px}
+.title-btn{all:unset;cursor:pointer;font-size:12px;color:var(--c-primary);font-weight:800;padding:2px 0}
+.title-btn:disabled{cursor:default;color:var(--c-text-sub)}
+.title-btn:focus-visible{outline:3px solid var(--c-mint)}
+.tedit{display:flex;flex-direction:column;gap:6px;margin:4px 0;max-width:240px}
+.tedit .input{min-height:36px;font-size:13px;padding:6px 10px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font:inherit;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;border:1px solid var(--c-border);background:#fff;color:#4b4f57;cursor:pointer}
+.chip.on{background:var(--c-ink);border-color:var(--c-ink);color:#fff}
+.role{display:flex;align-items:center;gap:6px;margin-top:4px}
+.role select{font:inherit;font-size:12px;border:1px solid var(--c-border);border-radius:8px;padding:3px 6px;background:#fff;color:var(--c-ink)}
+.pc{text-align:center}
+.pv{font:inherit;font-size:11.5px;font-weight:800;border-radius:8px;padding:6px 4px;width:100%;min-width:58px;min-height:32px;cursor:pointer;border:1px solid transparent}
+.pv.all{background:var(--c-primary);color:#fff}
+.pv.own{background:var(--c-primary-soft);color:var(--c-primary);border-color:#b5e0d5}
+.pv.none{background:#f7f6f3;color:var(--c-muted)}
+.pv:disabled{cursor:default;opacity:.85}
+.pv:not(:disabled):hover{outline:2px solid var(--c-mint)}
+.act{white-space:nowrap;padding-right:12px!important;text-align:right}
+.act .btn+.btn{margin-left:6px}
+.btn.del{color:var(--c-danger);border-color:#f7c4c4}
+.foot{padding:12px 16px;border-top:1px solid #f1f0ee;line-height:1.6}
+@media (max-width:1023px){.inv-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:767px){.inv-grid{grid-template-columns:1fr}.pt th.who,.pt td.who{min-width:140px}}
+.inv-done{display:flex;flex-direction:column;gap:12px;border:2px solid var(--c-primary)}
+.inv-preview{white-space:pre-wrap;font:inherit;font-size:13px;background:#f7f6f3;border-radius:10px;padding:12px;line-height:1.6;margin:0}
+.inv-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.inv-acts.big{margin-top:0}
+.inv-acts a.btn{text-decoration:none}
+.leave-ask{display:flex;flex-direction:column;gap:6px;text-align:left;white-space:normal;max-width:240px;margin-left:auto;background:#fde8e8;border:1px solid #f7c4c4;border-radius:10px;padding:8px 10px}
+.btn.del-solid{background:var(--c-danger);border-color:var(--c-danger);color:#fff}
+
+/* 카테고리 구분 · 유사색(analogous) 팔레트
+   브랜드 틸(#13756A)을 중심으로 파랑 ↔ 초록 사이 4가지 톤, 채도 낮게 · 밝기 맞춤 → 구분은 되고 눈은 편하게
+   그룹 머리: 옅은 바탕 + 위쪽 색 띠 · 버튼: 전체 = 그룹색 채움 / 본인 담당 = 옅은 그룹색 / — = 중립 회색 */
+.pt{
+  --bk:#3E6A84; --bk-soft:#E9F0F4; --bk-line:#C9D9E3;   /* 예약 · 스틸 블루 */
+  --cu:#2A706A; --cu-soft:#E6F1EF; --cu-line:#C2DDD8;   /* 고객 · 브랜드 틸 */
+  --pa:#4D7360; --pa-soft:#EAF1EC; --pa-line:#CADCCF;   /* 결제 · 매출 · 세이지 */
+  --op:#5F6880; --op-soft:#EDEFF3; --op-line:#D3D7E0;   /* 매장 운영 · 슬레이트 */
+}
+.pt th.grp{font-size:12.5px;font-weight:900;padding:9px 6px 7px;border-left:0;border-top:3px solid}
+.pt .t-bk{--g:var(--bk);--gs:var(--bk-soft);--gl:var(--bk-line)}
+.pt .t-cu{--g:var(--cu);--gs:var(--cu-soft);--gl:var(--cu-line)}
+.pt .t-pa{--g:var(--pa);--gs:var(--pa-soft);--gl:var(--pa-line)}
+.pt .t-op{--g:var(--op);--gs:var(--op-soft);--gl:var(--op-line)}
+.pt th.grp,.pt th.pk{background:var(--gs);color:var(--g);border-top-color:var(--g)}
+.pt th.pk{font-weight:700}
+.pt td.pc{background:#fff}
+.pt .gs{border-left:1px solid var(--gl)}
+.pt th.grp{border-left:1px solid var(--gl)}
+.pt td.pc .pv.all{background:var(--g);color:#fff;border-color:var(--g)}
+.pt td.pc .pv.own{background:var(--gs);color:var(--g);border-color:var(--gl)}
+.pt td.pc .pv.none{background:#F6F5F3;color:#B4B8BF;border-color:transparent}
+.pt td.pc .pv:not(:disabled):hover{outline:2px solid var(--gl)}
+.pt td.pc{padding:8px 5px}
+.pt tr.invited td.pc{background:#fffdf5}
+
+/* ---- 전치 표: 구성원 = 가로(열) · 권한 = 세로(행) ---- */
+.pt2{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;
+  --bk:#3E6A84;--bk-soft:#E9F0F4;--bk-line:#C9D9E3;--cu:#2A706A;--cu-soft:#E6F1EF;--cu-line:#C2DDD8;
+  --pa:#4D7360;--pa-soft:#EAF1EC;--pa-line:#CADCCF;--op:#5F6880;--op-soft:#EDEFF3;--op-line:#D3D7E0}
+.pt2 .t-bk{--g:var(--bk);--gs:var(--bk-soft);--gl:var(--bk-line)}
+.pt2 .t-cu{--g:var(--cu);--gs:var(--cu-soft);--gl:var(--cu-line)}
+.pt2 .t-pa{--g:var(--pa);--gs:var(--pa-soft);--gl:var(--pa-line)}
+.pt2 .t-op{--g:var(--op);--gs:var(--op-soft);--gl:var(--op-line)}
+.pt2 th,.pt2 td{border-bottom:1px solid #f1f0ee}
+.pt2 thead th{background:#fff;vertical-align:top;border-bottom:1px solid var(--c-line);position:sticky;top:0;z-index:2}
+.pt2 .corner{position:sticky;left:0;z-index:3;text-align:left;padding:14px 14px;width:150px;min-width:150px}
+.pt2 .mcol{min-width:150px;padding:12px 10px;text-align:left;border-left:1px solid #f1f0ee}
+.pt2 .mcol.invited{background:#fffdf5}
+.mhead{display:flex;flex-direction:column;gap:4px;font-weight:400}
+.mhead .nm{font-size:14.5px;font-weight:900;display:flex;align-items:center;gap:6px}
+.mhead .inv-acts{flex-direction:column;align-items:stretch}
+.mhead .inv-acts .btn{width:100%}
+.leave-link{all:unset;cursor:pointer;font-size:11.5px;color:var(--c-muted);font-weight:700;margin-top:4px;align-self:flex-start}
+.leave-link:hover{color:var(--c-danger);text-decoration:underline}
+.mhead .leave-ask{max-width:none;margin:4px 0 0}
+.pt2 .grow th{background:var(--gs);color:var(--g);font-size:12.5px;font-weight:900;text-align:left;padding:8px 14px;border-top:1px solid var(--gl);position:sticky;left:0}
+.gbar{display:inline-block;width:3px;height:12px;border-radius:2px;background:var(--g);margin-right:8px;vertical-align:-1px}
+.pt2 .pk{position:sticky;left:0;background:#fff;z-index:1;text-align:left;font-weight:700;color:#3c4048;padding:8px 14px;white-space:nowrap;box-shadow:inset -1px 0 0 #f1f0ee}
+.pt2 .pc{text-align:center;padding:6px 8px;border-left:1px solid #f1f0ee}
+.pt2 .pc.invited{background:#fffdf5}
+.pt2 .pv{font:inherit;font-size:12px;font-weight:800;border-radius:8px;padding:6px 4px;width:100%;max-width:120px;min-height:34px;cursor:pointer;border:1px solid transparent}
+.pt2 .pv.all{background:var(--g);color:#fff;border-color:var(--g)}
+.pt2 .pv.own{background:var(--gs);color:var(--g);border-color:var(--gl)}
+.pt2 .pv.none{background:#F6F5F3;color:#B4B8BF}
+.pt2 .pv:disabled{cursor:default;opacity:.9}
+.pt2 .pv:not(:disabled):hover{outline:2px solid var(--gl)}
+@media (max-width:767px){
+  .pt2 .corner{width:108px;min-width:108px;padding:10px}
+  .pt2 .corner .sm{font-size:10px}
+  .pt2 .mcol{min-width:122px;padding:10px 8px}
+  .pt2 .pk{white-space:normal;padding:8px 10px;font-size:12px;width:108px}
+  .pt2 .pc{padding:5px 4px}
+}
+
+/* 구성원 열 구분: 진한 세로선 + 한 칸 건너 바탕색 + 머리 위 색 띠 */
+.pt2 .mcol,.pt2 .pc{border-left:2px solid #C9C4BB}
+.pt2 .pk{box-shadow:inset -2px 0 0 #C9C4BB}
+.pt2 .mcol{border-bottom:2px solid #C9C4BB;border-top:4px solid #2A706A}
+.pt2 .mcol.alt{border-top-color:#5F6880}
+.pt2 .mcol.alt,.pt2 .pc.alt{background:#F4F2EE}
+.pt2 .mcol.invited,.pt2 .pc.invited{background:inherit}
+.pt2 .mcol.invited:not(.alt),.pt2 .pc.invited:not(.alt){background:#fff}
+.pt2 tbody tr:not(.grow):hover td,.pt2 tbody tr:not(.grow):hover th{background-image:linear-gradient(rgba(42,112,106,.05),rgba(42,112,106,.05))}
+.pt2 td.pc{border-bottom:1px solid #ECE9E4}
+.pt2 .grow th{border-left:0}
+.via{display:flex;gap:6px;flex-wrap:wrap}
+.via button{font:inherit;font-size:13px;font-weight:800;padding:9px 14px;border-radius:10px;border:1px solid var(--c-border);background:#fff;color:#4b4f57;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.via button.on{background:var(--c-ink);border-color:var(--c-ink);color:#fff}
+.pill.soon{background:#EDEFF3;color:#5F6880;font-size:10px;padding:1px 7px}
+.via button.on .pill.soon{background:#3a3e46;color:#cfd2d8}
+.msg.note{background:#f7f6f3;color:var(--c-text-sub)}

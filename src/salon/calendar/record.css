@@ -1,0 +1,33 @@
+/* 고객 기록 · 비포 / 애프터 */
+.trec{border:1px solid #C2DDD8;background:#F7FBFA;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.trec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.trec-h h3{font-size:14px;font-weight:900}
+.trec-note{line-height:1.5}
+.trec-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trec-col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.trec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,76px));gap:6px}
+.trec-ph,.trec-add{aspect-ratio:3/4;border-radius:10px;overflow:hidden;position:relative;padding:0;cursor:pointer;font:inherit}
+.trec-ph{border:1px solid var(--c-line);background:#eceae6;display:grid;place-items:center}
+.trec-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.trec-ph:focus-visible,.trec-add:focus-visible{outline:3px solid var(--c-mint);outline-offset:2px}
+.trec-ph .tag{position:absolute;left:4px;font-size:9.5px;font-weight:800;border-radius:6px;padding:1px 5px;color:#fff}
+.trec-ph .tag.ai{top:4px;background:rgba(42,112,106,.92)}
+.trec-ph .tag.sc{bottom:4px;background:rgba(62,106,132,.92)}
+.trec-add{border:1.5px dashed #9CC7BF;background:#fff;color:#2A706A;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.trec-add b{font-size:20px;line-height:1}
+.trec-add:disabled{opacity:.6;cursor:default}
+.trec-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.trec .pill.soon,.trec-view .pill.soon{background:#EDEFF3;color:#5F6880;font-size:10px;padding:1px 7px}
+.trec.compact .trec-grid{grid-template-columns:repeat(auto-fill,minmax(56px,70px))}
+.trec-view{position:fixed;inset:0;background:rgba(22,24,29,.55);z-index:80;display:grid;place-items:center;padding:16px}
+.trec-box{background:#fff;border-radius:16px;padding:16px;width:min(760px,100%);max-height:calc(100vh - 32px);overflow:auto;display:flex;flex-direction:column;gap:12px}
+.trec-box .x{font-size:22px;background:none;border:0;cursor:pointer;color:var(--c-text-sub)}
+.trec-pair{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.trec-pair.two{grid-template-columns:1fr 1fr}
+.trec-pair figure{margin:0;display:flex;flex-direction:column;gap:4px}
+.trec-pair img{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:#f2f1ee}
+.btn.warn{color:var(--c-danger)}
+@media (max-width:767px){.trec-pair.two{grid-template-columns:1fr}}
+.cam-hint{background:#F3F8F6;border:1px dashed #9CC7BF;border-radius:10px;padding:7px 10px;color:#2A706A}
+.trec-ph .tag.ai.tmp{background:rgba(138,90,43,.9)}
+.trec-guide{background:#fff;border:1px dashed #9CC7BF;border-radius:10px;padding:7px 10px;line-height:1.5}

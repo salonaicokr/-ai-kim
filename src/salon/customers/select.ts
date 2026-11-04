@@ -1,0 +1,1 @@
+export const CUST_SELECT = "id, name, phone, grade_id, points, memo, visit_count, first_visit_at, last_visit_at, created_at, assigned_designer_id, prepaid_balance, marketing_agree, marketing_basis, revisit_due_at, survey_flags, survey_pending";

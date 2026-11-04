@@ -1,0 +1,42 @@
+/* 사전 문진 위험 배지 · 상담 요약 */
+.rk-row{display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center}
+.rk{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:10px;font-size:10.5px;font-weight:800;white-space:nowrap;line-height:1}
+.rk::before{content:"";width:6px;height:6px;background:currentColor;flex:none}
+.rk-s{background:#FDECEC;color:#9F1D17;border:1px solid #F3B7B2}.rk-s::before{transform:rotate(45deg)}
+.rk-c{background:#FFF1D6;color:#7A4306;border:1px solid #F2CB87}.rk-c::before{border-radius:50%}
+.rk-p{background:#E8EEFF;color:#1E3A8A;border:1px solid #B8C8F5}.rk-p::before{border-radius:1px}
+.rk-g{background:#EDEFF3;color:#4A5260;border:1px dashed #A8B0BD}.rk-g::before{display:none}
+.rk-more{background:#fff;color:#4A5260;border:1px solid #D5D9E0}.rk-more::before{display:none}
+.rk-row.sm .rk{height:18px;font-size:10px;padding:0 6px}
+.bk .rk-row{margin-top:2px}
+.bk .rk{height:17px;font-size:9.5px;padding:0 5px}
+.cs-box{border:1px solid var(--c-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.cs-box.danger{border-color:#F3B7B2;background:#FFFAFA}
+.cs-h{display:flex;align-items:center;gap:8px}.cs-h h3{font-size:14px;font-weight:900}
+.cs-acts{display:flex;gap:6px;flex-wrap:wrap}
+.cs-ok{color:#2A706A;font-weight:700}
+.cs-back{position:fixed;inset:0;background:rgba(20,22,28,.4);z-index:85;display:flex;justify-content:flex-end}
+.cs-drawer{width:min(600px,100%);height:100%;background:#fff;box-shadow:-12px 0 32px rgba(20,22,28,.22);padding:22px 26px;display:flex;flex-direction:column;gap:14px;overflow:auto;box-sizing:border-box}
+.cs-top{display:flex;align-items:flex-start;gap:10px}.cs-top>div{flex:1}
+.cs-top h2{font-size:26px;font-weight:900;letter-spacing:-.5px}
+.cs-k{font-size:12px;font-weight:800;color:#5B6472}
+.cs-top .x{font-size:26px;background:none;border:1px solid var(--c-border);border-radius:12px;width:44px;height:44px;cursor:pointer;color:#3B4351}
+.cs-legend{display:flex;gap:6px;flex-wrap:wrap}
+.cs-sec{border:1px solid var(--c-line);border-radius:16px;padding:14px 18px;display:flex;flex-direction:column;gap:2px}
+.cs-sec h3{font-size:16px;font-weight:900;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.cs-sec.safety{background:#FDECEC;border-color:#F3B7B2}.cs-sec.safety h3{color:#9F1D17}
+.cs-sec.style{background:#E8EEFF;border-color:#B8C8F5}.cs-sec.style h3{color:#1E3A8A}
+.cs-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:9px 0;border-top:1px solid rgba(0,0,0,.08);font-size:15px}
+.cs-row span{font-size:13px;color:#4A5260;font-weight:700}
+.cs-row em{font-style:normal;color:#9F1D17}
+.cs-guide{display:flex;flex-direction:column;gap:6px;border:1px solid var(--c-line);border-radius:12px;padding:10px 12px;margin-top:6px}
+.cs-guide .btn{align-self:flex-start}
+.cs-diff{display:flex;gap:10px;align-items:center;border-top:1px solid #E4E8EE;padding:9px 0}
+.cs-diff>div{display:flex;flex-direction:column}
+.cs-tag{width:46px;height:24px;border-radius:12px;font-size:11.5px;font-weight:800;display:grid;place-items:center;background:#EDEFF3;color:#3B4351;flex:none}
+.cs-tag.ch{background:#FFF1D6;color:#7A4306}
+.cs-q{display:flex;flex-direction:column;border-top:1px solid #E4E8EE;padding:8px 0}
+.cs-more{all:unset;cursor:pointer;color:#2A706A;font-weight:800;font-size:13px;padding-top:6px}
+.cs-foot{display:flex;gap:10px;align-items:center;margin-top:auto;position:sticky;bottom:-22px;background:#fff;padding:12px 0}
+.cs-foot .big{flex:1;min-height:56px;font-size:16px}
+.cs-done{flex:1;display:flex;flex-direction:column;color:#2A706A;font-weight:800;background:#E6F1EF;border-radius:12px;padding:10px 14px}

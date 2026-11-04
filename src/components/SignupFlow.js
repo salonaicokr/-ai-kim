@@ -52,14 +52,19 @@ export function SignupFlow() {
   const [sessionUser, setSessionUser] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [startedWith, setStartedWith] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const methodNames = { phone: "휴대폰", kakao: "카카오", naver: "네이버", google: "구글" };
+    const method = sessionStorage.getItem("salonai-login-method");
+    const phone = sessionStorage.getItem("salonai-login-phone");
+    if (method && methodNames[method]) setStartedWith(methodNames[method]);
     supabase.auth.getSession().then(async ({ data }) => {
       const user = data.session?.user;
       if (!user) {
         const saved = readSignupDraft();
-        if (saved) setDraft((current) => ({ ...current, ...saved }));
+        setDraft((current) => ({ ...current, ...(saved ?? {}), ...(phone ? { phone } : {}) }));
         return;
       }
       const { data: stores } = await supabase.from("stores").select("id").eq("owner_id", user.id).limit(1);
@@ -174,6 +179,7 @@ export function SignupFlow() {
           ))}
         </div>
         <div className="panel">
+          {startedWith ? <p className="note">{startedWith}로 시작했습니다. 이어서 매장 가입을 진행합니다.</p> : null}
           {error ? <p className="error">{error}</p> : null}
           {notice ? <p className="note">{notice}</p> : null}
           {step === 0 ? <FormStep draft={draft} onChoose={chooseForm} onNext={() => setStep(1)} /> : null}

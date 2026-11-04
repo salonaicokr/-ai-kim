@@ -51,7 +51,7 @@ export function DeskFrame({ children }) {
   }, [router]);
 
   if (state.loading) {
-    return <div className="desk-main">매장 정보를 불러오는 중입니다.</div>;
+    return <div className="desk-main loading">매장 정보를 불러오는 중입니다.</div>;
   }
   if (state.error) {
     return <div className="desk-main"><p className="error">{state.error}</p></div>;
@@ -64,11 +64,14 @@ export function DeskFrame({ children }) {
         <Sidebar />
         <div className="desk-main">
           <div className="topbar">
-            <div>
+            <div className="top-copy">
               <h1>{state.store.name}</h1>
               <p>{formLabel[state.store.form]} · {categoryLabel[state.store.category]}</p>
             </div>
-            <span className={pending ? "status" : "status live"}>{pending ? "관리자 확인 중" : "운영 중"}</span>
+            <div className="top-actions">
+              <span className={pending ? "status" : "status live"}>{pending ? "관리자 확인 중" : "운영 중"}</span>
+              <span className="avatar" aria-hidden="true">{(state.store.representative || state.store.name || "원").trim().slice(0, 1)}</span>
+            </div>
           </div>
           {children}
         </div>

@@ -13,7 +13,8 @@
     "supabase:reset": "supabase db reset"
   },
   "devDependencies": {
-    "supabase": "^2.58.5"
+    "supabase": "^2.58.5",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",

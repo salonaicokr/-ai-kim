@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/src/lib/browser";
 import { useDesk } from "@/src/components/DeskFrame";
-import { dbErrorMessage, seoulDateLabel } from "@/src/lib/format";
+import { TodayBoard } from "@/src/components/TodayBoard";
+import { categoryLabel, dbErrorMessage, seoulDateLabel } from "@/src/lib/format";
 
 const cards = [
   ["menus", "메뉴·소요시간", "업종 템플릿을 매장 가격으로 맞춥니다.", "/desk/settings/menus", "메뉴 보기"],
@@ -48,6 +49,10 @@ export default function DeskHome() {
     const { error: updateError } = await supabase.from("store_setup").update({ payment_deferred: true }).eq("store_id", desk.store.id);
     if (updateError) setError(dbErrorMessage(updateError));
     else desk.refresh();
+  }
+
+  if (desk.store.status === "approved") {
+    return <TodayBoard categoryLabel={categoryLabel[desk.store.category] ?? "헤어"} storeId={desk.store.id} />;
   }
 
   return (

@@ -27,6 +27,26 @@ export function seoulStamp(date, time) {
   return new Date(`${date}T${time}:00+09:00`).toISOString();
 }
 
+export function seoulDayRange(date = new Date()) {
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  const start = new Date(`${day}T00:00:00+09:00`);
+  return { day, start: start.toISOString(), end: new Date(start.getTime() + 86400000).toISOString() };
+}
+
+export function seoulClock(value) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(value));
+}
+
 export function seoulTimeRange(start, end) {
   const format = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -75,6 +95,25 @@ export function dbErrorMessage(error) {
 export const formLabel = { solo: "1인샵", shop: "매장", multi: "다매장" };
 export const categoryLabel = { hair: "헤어", nail: "네일" };
 export const sourceLabel = { naver: "네이버", phone: "전화", other: "기타" };
+export const bookingStatusLabel = {
+  requested: "예약 요청",
+  confirmed: "확정",
+  in_service: "시술중",
+  completed: "완료",
+  cancelled_customer: "고객 취소",
+  cancelled_shop: "매장 취소",
+  no_show: "노쇼",
+  blocked: "시간 막음",
+};
+export const bookingSourceLabel = {
+  phone: "전화",
+  walk_in: "현장",
+  naver: "네이버",
+  dm: "DM",
+  manual: "직접",
+  app: "앱",
+};
+export const memberRoleLabel = { owner: "원장", staff: "디자이너", assistant: "어시스턴트" };
 export const repeatLabel = { none: "반복 없음", weekly: "매주" };
 export const entryLabel = { paid: "수납", refund: "환불", partial_refund: "부분 환불" };
 export const methodLabel = {

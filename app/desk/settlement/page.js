@@ -7,19 +7,23 @@ import { won } from "@/src/lib/format";
 
 export default function SettlementPage() {
   const desk = useDesk();
-  const [sum, setSum] = useState({ paid: 0, refund: 0 });
+  const [rows, setRows] = useState([]);
+  const [monthOnly, setMonthOnly] = useState(true);
 
   useEffect(() => {
     if (!desk?.store) return;
-    supabase.from("payment_entries").select("amount_krw, entry_type").eq("store_id", desk.store.id).then(({ data }) => {
-      const next = { paid: 0, refund: 0 };
-      for (const row of data ?? []) {
-        if (row.entry_type === "paid") next.paid += row.amount_krw;
-        else next.refund += row.amount_krw;
-      }
-      setSum(next);
+    supabase.from("payment_entries").select("amount_krw, entry_type, created_at").eq("store_id", desk.store.id).then(({ data }) => {
+      setRows(data ?? []);
     });
   }, [desk?.store]);
+
+  const monthKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
+  const visible = rows.filter((row) => !monthOnly || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date(row.created_at)) === monthKey);
+  const sum = visible.reduce((total, row) => {
+    if (row.entry_type === "paid") total.paid += row.amount_krw;
+    else total.refund += row.amount_krw;
+    return total;
+  }, { paid: 0, refund: 0 });
 
   if (!desk?.store) return null;
   return (
@@ -29,6 +33,7 @@ export default function SettlementPage() {
           <h1>정산</h1>
           <p>카드사 정산은 2차입니다. 아래 숫자는 매장이 직접 적은 금액입니다.</p>
         </div>
+        <button className="btn" type="button" onClick={() => setMonthOnly((value) => !value)}>{monthOnly ? "이번 달" : "전체"}</button>
       </header>
       <div className="kpi-grid">
         <article className="kpi"><span>수납</span><strong>{won(sum.paid)}</strong></article>
