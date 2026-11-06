@@ -1,0 +1,8 @@
+/* 설정 탭: 화면 위쪽에 항상 붙어 있음 (시술메뉴 · 구성원 화면도 같은 탭) */
+.set-tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 0;margin:-4px 0 0;background:var(--c-bg,#F4F3F1);box-shadow:0 8px 12px -12px rgba(22,24,29,.25)}
+.set-tabs::-webkit-scrollbar{display:none}
+.set-tabs a{flex:none;font-size:13px;font-weight:800;padding:8px 14px;border-radius:999px;border:1px solid var(--c-border);background:#fff;color:#4b4f57;text-decoration:none;white-space:nowrap}
+.set-tabs a.on{background:var(--c-ink);border-color:var(--c-ink);color:#fff}
+.set-tabs a:focus-visible{outline:3px solid var(--c-mint,#7FD8C8);outline-offset:2px}
+/* 탭에 가려지지 않게 구역 위쪽 여백 */
+#info,#hours,#schedule,#naver,#db,#ai,#connect,#showcase-grace{scroll-margin-top:72px}

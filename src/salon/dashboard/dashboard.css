@@ -1,0 +1,124 @@
+/* 홈 · 오늘 매장 현황 (POS 메인) */
+.kpi-c .big small{font-size:14px;font-weight:700;margin-left:2px;color:var(--c-text-sub)}
+.kpi-c.amb .big{color:#7A4306}.kpi-c.teal .big{color:#0F766E}.kpi-c.red .big{color:#9F1D17}
+.dash{align-items:start}
+.dash-side{display:flex;flex-direction:column;gap:12px}
+.dash-side .list>li{gap:8px}
+.dash-side .btn,.dash-acts .btn{text-decoration:none}
+.dash-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dz-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.dz-col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.dz-h{display:flex;align-items:baseline;gap:6px;padding-bottom:6px;border-bottom:2px solid #E3E1DD}
+.dz-empty{padding:8px 0}
+.dz-bk{display:flex;gap:8px;align-items:flex-start;border:1.5px solid #1B1F2A;border-radius:10px;padding:7px 10px;text-decoration:none;color:inherit;background:#fff}
+.dz-bk:hover{background:#faf9f7}
+.dz-bk .dz-t{font-weight:900;font-size:13px;min-width:40px}
+.dz-bk .dz-m{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dz-bk .dz-m .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dz-bk.st-completed{background:#EEF0F3;border-color:#CDD2DB;color:#4A5260}
+.dz-bk.st-in_service{background:#0F766E;border-color:#0F766E;color:#fff}.dz-bk.st-in_service .sm{color:#d9f1ec}
+.dz-bk.st-requested{background:#FFF1D6;border-color:#F2CB87}
+.dz-bk.st-blocked{background:repeating-linear-gradient(135deg,#EDEFF3,#EDEFF3 8px,#E1E4EA 8px,#E1E4EA 16px);border:1px dashed #8A93A3}
+
+/* 다매장 통합 보기 */
+.br-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.br-card{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit}
+.br-card:hover{border-color:#2A706A}
+.br-card dl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0}
+.br-card dt{font-size:12px;color:var(--c-text-sub)}.br-card dd{margin:0;font-weight:800;font-size:15px}
+.br-tw{overflow-x:auto}
+.br-table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+.br-table th,.br-table td{padding:10px 8px;border-bottom:1px solid #E3E1DD;text-align:right;white-space:nowrap}
+.br-table th[scope=row],.br-table thead th:first-child{text-align:left}
+.br-table thead th{font-size:12px;color:var(--c-text-sub);font-weight:700}
+.br-table tfoot th,.br-table tfoot td{font-weight:900;border-top:2px solid #1B1F2A;border-bottom:0}
+.br-barh{width:30%}
+.br-bar{display:block;height:10px;border-radius:0 4px 4px 0;background:#2A706A;min-width:2px}
+
+/* S-18 승인 대기: 체크리스트가 주인공 · 테스트 버튼은 3순위 */
+.pd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.pd-grid{grid-template-columns:1fr}}
+.pd-card{display:flex;flex-direction:column;gap:10px}
+.pd-check,.pd-steps,.pd-unlock,.pd-prep{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pd-check li{display:flex;align-items:center;gap:8px;font-size:14px}
+.pd-check .ck{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;background:#FFF1D6;color:#7A4306}
+.pd-check li.done .ck{background:#DDF0EC;color:#0F5E57}
+.pd-steps li{display:flex;gap:10px;align-items:flex-start}
+.pd-steps .n{width:24px;height:24px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;border:2px solid #D7D4CF;color:#8A8F99}
+.pd-steps li.done .n{background:#2A706A;border-color:#2A706A;color:#fff}
+.pd-steps li.now .n{border-color:#C98A1B;color:#7A4306}
+.pd-steps li>span:last-child{display:flex;flex-direction:column;gap:2px}
+.pd-unlock li{display:flex;gap:8px;font-size:13.5px;color:#4b4f57}
+.pd-prep{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:10px}
+.pd-prep a{display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--c-border);border-radius:12px;color:inherit;text-decoration:none}
+.pd-prep a:hover{border-color:#2A706A}
+.pd-prep .ck{width:22px;height:22px;flex:none;border-radius:6px;border:2px solid #D7D4CF;display:grid;place-items:center;font-size:12px;font-weight:900}
+.pd-prep .ck.on{background:#2A706A;border-color:#2A706A;color:#fff}
+.pd-prep a>span:nth-child(2){display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.pd-prep .go{color:var(--c-primary);font-weight:900}
+.pd-demo{display:flex;align-items:center;gap:8px;justify-content:flex-end;opacity:.75}
+.pd-demo-link{font:inherit;font-size:12px;color:#6B6F78;background:none;border:0;text-decoration:underline;cursor:pointer;padding:4px}
+
+/* 홈 개편 (11/6 시안) */
+.hm-chip{height:26px;padding:0 10px;font-size:12px;text-decoration:none}
+.rk-r{background:#FDECEA;color:#9F1D17;border:1px solid #F3B9B3}
+.hm-sub{margin-top:2px}.hm-sub .btn{text-decoration:none;min-height:34px;padding:4px 12px;font-size:13px}
+.hm-note{margin-top:6px;padding:8px 12px;background:#FFF8EA;border:1px solid #F2E0B8;border-radius:10px}
+.hm-note a{color:var(--c-primary);font-weight:800;text-decoration:none}
+.cnt{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:#EEECE8;font-size:11.5px;font-weight:800;color:#4A4F57;margin-left:6px}
+.hm-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.hm-grid.one{grid-template-columns:1fr}
+.hm-h{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.hm-sh{font-size:13.5px;font-weight:800;margin:0 0 6px}
+.hm-ops-cols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px}
+.hm-bk{list-style:none;margin:0;padding:0}
+.hm-bk a{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid #EEECE8;text-decoration:none;color:inherit;font-size:13.5px}
+.hm-bk a:hover{background:#FAF9F7}
+.hm-dot{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.hm-dot li::before{content:"· "}
+.hm-dot li.sm::before{content:""}
+.hm-more{display:inline-block;margin-top:8px;color:var(--c-text-sub);text-decoration:none}
+.hm-sales{display:flex;flex-direction:column;gap:6px}.hm-sales p{margin:0;font-size:14px}
+.hm-big{font-size:28px!important;font-weight:900;letter-spacing:-.5px}.hm-big small{font-size:13px;margin-left:2px;color:var(--c-text-sub)}
+.hm-link{color:var(--c-primary);font-weight:800;font-size:13px;text-decoration:none;margin-top:auto}
+.hm-app{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center}
+.hm-mini{border:1px solid var(--c-line);border-radius:12px;padding:10px 14px}.hm-mini .lbl{font-size:12px;color:var(--c-text-sub);margin:0}
+.hm-mini .big{font-size:24px;margin:2px 0 0}.hm-mini .big small{font-size:12px;margin-left:2px}
+.hm-biz{margin:-2px 0}.hm-biz a{color:var(--c-primary);font-weight:800;text-decoration:none}
+.hm-bottom{grid-template-columns:1fr 1fr;align-items:start}
+.hm-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.hm-table th{font-size:12px;color:var(--c-text-sub);font-weight:700;text-align:left;background:#F6F5F2;padding:7px 6px}
+.hm-table td{padding:7px 6px;border-bottom:1px solid #EEECE8}.hm-table td.r{text-align:right}
+.hm-table .btn{text-decoration:none;min-height:28px;padding:2px 10px;font-size:12px}
+.hm-sv{display:flex;flex-direction:column;gap:8px}
+.hm-sv-i{display:flex;flex-direction:column;gap:2px;border-left:3px solid #0F766E;padding:6px 10px;border-radius:4px;background:#F7FBFA;text-decoration:none;color:inherit;font-size:13.5px}
+@media (max-width:900px){
+  .hm-grid,.hm-bottom{grid-template-columns:1fr}
+  .hm-ops-cols{grid-template-columns:1fr;gap:12px}
+  .hm-app{grid-template-columns:1fr;gap:8px}
+  /* 휴대폰 · 태블릿: 오늘 운영 → 디자이너별 → 매출 → 고객 앱 → 이탈 · 문진 */
+  .hm-grid{display:contents}
+  .hm-o1{order:1}.hm-o2{order:2}.hm-o3{order:3}.hm-o4{order:4}.hm-o5{order:5}.hm-o6{order:6}
+}
+/* 홈 2차: 이용료 바 · 부가서비스 · 앱 알림 · 공지 */
+.hm-bill{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0F5E57;color:#fff;border-radius:14px;padding:12px 18px}
+.hm-bill-tag{background:rgba(255,255,255,.16);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800}
+.hm-bill-amt{font-size:22px;font-weight:900}.hm-bill-amt small{font-size:13px;margin-left:1px}
+.hm-bill-sub{font-size:12.5px;color:#CDE7E2}.hm-bill-br{font-size:12.5px;color:#E5F3F0}.hm-bill-br b{color:#fff}
+.hm-addons{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.hm-addon{border:1px solid var(--c-line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.hm-addon .pill{margin-left:4px}
+.hm-app3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hm-ops-cols{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}
+.hm-nt{color:inherit;text-decoration:none}.hm-nt:hover{text-decoration:underline}
+.hm-h .hm-link{margin-top:0}
+@media (max-width:900px){.hm-ops-cols{grid-template-columns:1fr}.hm-o7{order:7}.hm-o8{order:5}.hm-bill{padding:12px 14px}.hm-bill-br{width:100%}}
+/* 네이버 플레이스 연결 안내 (연결할 때까지) */
+.hm-naver{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1.5px solid #03C75A;background:#F2FBF5;border-radius:14px;text-decoration:none;color:inherit}
+.hm-naver>span:nth-child(2){display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.hm-naver-n{width:28px;height:28px;border-radius:6px;background:#03C75A;color:#fff;font-weight:900;display:grid;place-items:center;flex:none}
+.hm-naver .go{color:#0B8A3E;font-weight:800;font-size:13px;white-space:nowrap}
+.hm-naver-banner{position:relative;margin-bottom:12px}
+.hm-naver-banner .hm-naver{padding-right:44px}
+.hm-naver-x{position:absolute;top:8px;right:8px;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#0B8A3E;font-size:18px;line-height:1;cursor:pointer}
+.hm-naver-x:hover{background:rgba(3,199,90,.12)}

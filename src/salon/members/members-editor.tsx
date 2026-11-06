@@ -13,12 +13,12 @@ export type Member = {
 };
 export type Log = { id: number; action: string; target_id: string | null; before: Partial<Member> | null; after: Partial<Member> | null; created_at: string };
 
-type Props = { shopId: string; shopName: string; myId: string; isOwner: boolean; canPerm?: boolean; canInvite: boolean; initialMembers: Member[]; logs: Log[] };
+type Props = { branchOf?: Record<string, string[]> | null; shopId: string; shopName: string; myId: string; isOwner: boolean; isMaster?: boolean; canPerm?: boolean; canInvite: boolean; initialMembers: Member[]; logs: Log[] };
 
 const TITLE_CHIPS = ["원장", "부원장", "실장", "디자이너", "인턴", "스태프", "데스크"];
 const SELECT = "id, user_id, display_name, role, title, permissions, status, is_designer, invite_code, invited_phone, sort_order";
 
-export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm = false, canInvite, initialMembers, logs }: Props) {
+export default function MembersEditor({ branchOf = null, shopId, shopName, myId, isOwner, isMaster = false, canPerm = false, canInvite, initialMembers, logs }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   // 서버에서 그릴 때는 주소를 모르니 빈 값, 브라우저에서 실제 주소
@@ -35,6 +35,10 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
   const [showLog, setShowLog] = useState(false);
   const [justInvited, setJustInvited] = useState<Member | null>(null);
   const [confirmLeave, setConfirmLeave] = useState<string | null>(null);
+  // 지점장 교체 확인: 이미 지점장이 있으면 해제 후 지정
+  const [bmAsk, setBmAsk] = useState<{ id: string | null; name: string } | null>(null);
+  const curBm = members.find((m) => m.role === "branch_manager" && m.status !== "left");
+  const roleOpts = ROLES.filter((r) => isMaster || !r.ownerOnly);
 
   const nameOf = (id: string | null) => members.find((m) => m.id === id)?.display_name ?? "구성원";
 
@@ -51,6 +55,25 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
     router.refresh();
   }
 
+  /** 지점장 지정 (지점당 1명 · 기존 지점장은 부원장으로) */
+  async function makeBm(id: string, name: string) {
+    setBmAsk(null);
+    const { error } = await supabase.rpc("set_branch_manager", { p_member: id });
+    if (error) { report(error, ""); return; }
+    const { data } = await supabase.from("shop_members").select(SELECT).eq("shop_id", shopId).neq("status", "left").order("sort_order").order("created_at");
+    if (data) setMembers(data as Member[]);
+    report(null, `${name} 님을 지점장으로 지정했어요${curBm && curBm.id !== id ? ` · ${curBm.display_name} 님은 부원장으로 바뀌었어요` : ""}`);
+    router.refresh();
+  }
+  function pickRole(m: Member, role: Role) {
+    if (role === "branch_manager") {
+      if (curBm && curBm.id !== m.id) setBmAsk({ id: m.id, name: m.display_name });
+      else makeBm(m.id, m.display_name);
+      return;
+    }
+    patch(m.id, { role, permissions: role === "custom" ? m.permissions : ({} as Permissions), ...(m.role === "branch_manager" && m.title === "지점장" ? { title: "부원장" } : {}) }, `${m.display_name} 기본 권한을 ‘${roleLabel(role)}’(으)로 바꿨어요`);
+  }
+
   function saveTitle(m: Member) {
     const t = titleDraft.trim();
     setEditTitle(null);
@@ -65,16 +88,27 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
     patch(m.id, { permissions: nextPerms, role: "custom" }, `${m.display_name} · ${PERM_KEYS.find((k) => k.key === key)?.label} → ${PERM_LABEL[nextPerms[key]]}`);
   }
 
-  async function invite(e: React.FormEvent) {
+  async function invite(e: React.FormEvent, confirmed = false) {
     e.preventDefault();
     if (!inv.name.trim()) return;
+    const asBm = inv.role === "branch_manager";
+    if (asBm && curBm && !confirmed) { setBmAsk({ id: null, name: inv.name.trim() }); return; }
+    setBmAsk(null);
+    // 지점장은 부원장으로 먼저 만든 뒤 지정 (지점당 1명 규칙 · 기존 지점장 해제)
     const { data, error } = await supabase
       .from("shop_members")
-      .insert({ shop_id: shopId, display_name: inv.name.trim(), invited_phone: inv.phone.trim() || null, role: inv.role, title: inv.title.trim() || "디자이너", status: "invited", is_designer: inv.role !== "desk", sort_order: members.length + 1 })
+      .insert({ shop_id: shopId, display_name: inv.name.trim(), invited_phone: inv.phone.trim() || null, role: asBm ? "vice" : inv.role, title: inv.title.trim() || "디자이너", status: "invited", is_designer: inv.role !== "desk", sort_order: members.length + 1 })
       .select(SELECT).single();
+    if (data && asBm) {
+      const { error: e2 } = await supabase.rpc("set_branch_manager", { p_member: (data as Member).id });
+      if (e2) { report(e2, ""); return; }
+      const { data: fresh } = await supabase.from("shop_members").select(SELECT).eq("id", (data as Member).id).single();
+      if (fresh) Object.assign(data as Member, fresh);
+      if (curBm) setMembers((ms) => ms.map((x) => (x.id === curBm.id ? { ...x, role: "vice", title: "부원장" } : x)));
+    }
     report(error, via === "sms" ? `${inv.name} 님 초대 문자를 보낼 수 있게 문자 앱을 열었어요.` : `${inv.name} 님 초대 링크를 만들었어요. 앱 푸시는 정식 버전에서 연결돼요.`);
     if (data) {
-      setMembers([...members, data as Member]);
+      setMembers((ms) => [...ms, data as Member]);
       setJustInvited(data as Member);
       setSentVia(via);
       // 문자: 휴대폰 문자 앱을 번호 · 내용이 채워진 채로 바로 엶 (정식 버전에서는 서버가 자동 발송)
@@ -132,7 +166,7 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
     <div className="mb-page">
       <div className="row" style={{ flexWrap: "wrap" }}>
         <div>
-          <p className="crumb">설정 · 구성원 · 권한 · {shopName}</p>
+          <p className="crumb"><a href="/desk/settings" className="back">← 설정</a> · 구성원 · 권한 · {shopName}</p>
           <h1 className="h1">권한은 원장님이 나눠 줍니다</h1>
         </div>
         <span className="sp" />
@@ -155,8 +189,8 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
             <label className="field"><span className="lbl">직함</span>
               <input id="inv-title" className="input" maxLength={16} value={inv.title} onChange={(e) => setInv({ ...inv, title: e.target.value })} /></label>
             <label className="field"><span className="lbl">기본 권한</span>
-              <select id="inv-role" className="input" value={inv.role} onChange={(e) => setInv({ ...inv, role: e.target.value as Exclude<Role, "owner"> })}>
-                {ROLES.filter((r) => r.value !== "custom").map((r) => <option key={r.value} value={r.value}>{r.label} · {r.hint}</option>)}
+              <select id="inv-role" className="input" value={inv.role} onChange={(e) => { const r = e.target.value as Exclude<Role, "owner">; setInv({ ...inv, role: r, ...(r === "branch_manager" ? { title: "지점장" } : inv.title === "지점장" ? { title: "디자이너" } : {}) }); }}>
+                {roleOpts.filter((r) => r.value !== "custom").map((r) => <option key={r.value} value={r.value}>{r.label} · {r.hint}</option>)}
               </select></label>
           </div>
           <div className="field">
@@ -197,6 +231,7 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
                 <th className="corner" scope="col"><span className="sm">권한 ↓ · 구성원 →</span></th>
                 {members.map((m, mi) => {
                   const owner = m.role === "owner";
+                  const bm = m.role === "branch_manager";
                   return (
                     <th key={m.id} scope="col" className={`mcol${m.status === "invited" ? " invited" : ""}${mi % 2 ? " alt" : ""}`}>
                       <div className="mhead">
@@ -222,18 +257,18 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
                           </button>
                         )}
                         <div className="role">
-                          {owner || !canEdit ? (
+                          {owner || !canEdit || (bm && !isMaster) ? (
                             <span className="sm">{roleLabel(m.role)}</span>
                           ) : (
                             <select aria-label={`${m.display_name} 기본 권한`} value={m.role}
-                              onChange={(e) => patch(m.id, { role: e.target.value as Role, permissions: e.target.value === "custom" ? m.permissions : ({} as Permissions) }, `${m.display_name} 기본 권한을 ‘${roleLabel(e.target.value)}’(으)로 바꿨어요`)}>
-                              {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                              onChange={(e) => pickRole(m, e.target.value as Role)}>
+                              {roleOpts.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                             </select>
                           )}
                           {m.status === "invited" && <span className="pill p-amb" title="테스트 버전: 수락 전에도 캘린더 · 예약에 바로 보여요">초대중 · 바로 사용</span>}
                         </div>
                         {m.status === "invited" && m.invite_code && canInvite && inviteActions(m)}
-                        {!owner && canEdit && m.status !== "invited" && (confirmLeave === m.id ? (
+                        {!owner && !(bm && !isMaster) && canEdit && m.status !== "invited" && (confirmLeave === m.id ? (
                           <div className="leave-ask">
                             <span className="sm"><b>{m.display_name}</b> 님을 퇴사 처리할까요? 매장 화면에 더 이상 들어올 수 없고, 지난 기록은 남아요.</span>
                             <div className="row" style={{ gap: 6 }}>
@@ -250,6 +285,17 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
                 })}
               </tr>
             </thead>
+            {branchOf && (
+              <tbody className="t-branch">
+                <tr>
+                  <th scope="row" className="pk">지점</th>
+                  {members.map((m, mi) => {
+                    const list = branchOf[m.user_id ?? `name:${m.display_name}`] ?? [shopName];
+                    return <td key={m.id} className={`pc br${mi % 2 ? " alt" : ""}`}><span className="sm">{list.join(" · ")}</span></td>;
+                  })}
+                </tr>
+              </tbody>
+            )}
             {PERM_GROUPS.map((g) => (
               <tbody key={g.group} className={`t-${g.tone}`}>
                 <tr className="grow"><th colSpan={members.length + 1} scope="colgroup"><span className="gbar" />{g.group}</th></tr>
@@ -257,10 +303,10 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
                   <tr key={k.key}>
                     <th scope="row" className="pk">{k.label}</th>
                     {members.map((m, mi) => {
-                      const v = (m.permissions[k.key] ?? "none") as Perm;
+                      const v = ((m.permissions ?? {})[k.key] ?? "none") as Perm;
                       return (
                         <td key={m.id} className={`pc${m.status === "invited" ? " invited" : ""}${mi % 2 ? " alt" : ""}`}>
-                          <button type="button" disabled={m.role === "owner" || !canEdit || (!isOwner && m.id === myId)} className={`pv ${v}`} onClick={() => cycle(m, k.key, k.own)}
+                          <button type="button" disabled={m.role === "owner" || m.role === "branch_manager" || !canEdit || (!isOwner && m.id === myId)} className={`pv ${v}`} onClick={() => cycle(m, k.key, k.own)}
                             aria-label={`${m.display_name} ${k.label}: ${PERM_LABEL[v]}`}>{PERM_LABEL[v]}</button>
                         </td>
                       );
@@ -275,6 +321,19 @@ export default function MembersEditor({ shopId, shopName, myId, isOwner, canPerm
           직함은 원장님이 직접 입력해요. 이름 아래 <b>✎ 직함</b>을 누르면 고칠 수 있어요 (예: 디자이너 → 부원장). 직함은 예약 · 고객 앱에 보이는 이름표이고, 권한은 표에서 따로 정해요. 표를 직접 고치면 기본 권한이 ‘직접 설정’으로 바뀌어요. 모든 변경은 이력에 남아요.
         </p>
       </div>
+
+      {bmAsk && (
+        <div className="mb-modal" role="dialog" aria-modal="true" aria-label="지점장 교체" onClick={() => setBmAsk(null)}>
+          <div className="card mb-modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="b">지점장을 바꿀까요?</h2>
+            <p className="sm">지점장은 지점당 1명이에요. <b>{bmAsk.name}</b> 님을 지점장으로 지정하면 지금 지점장 <b>{curBm?.display_name}</b> 님은 <b>부원장</b>으로 바뀌어요.</p>
+            <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
+              <button type="button" className="btn ghost" onClick={() => setBmAsk(null)}>취소</button>
+              <button type="button" className="btn pri" onClick={(e) => (bmAsk.id ? makeBm(bmAsk.id, bmAsk.name) : invite(e as unknown as React.FormEvent, true))}>지점장 바꾸기</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLog && (
         <div className="card">

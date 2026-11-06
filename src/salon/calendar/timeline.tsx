@@ -3,9 +3,10 @@
 import { useRef, useState } from "react";
 import { kindOf } from "@/src/lib/menu";
 import { RiskBadges } from "./consult";
-import { CLOSED, END_H, START_H, STATUS, durLabel, hhmm, snap, type Booking } from "./lib";
+import { CLOSED, STATUS, durLabel, hhmm, snap, type Booking } from "./lib";
 
-export type Lane = { key: string; label: string; sub?: string; count?: number; off?: boolean; today?: boolean; onLabel?: () => void };
+export type Lane = { key: string; label: string; sub?: string; count?: number; off?: boolean; today?: boolean; onLabel?: () => void;
+  /** 영업시간 밖 · 휴무 구간 [시작분, 끝분) — 회색, 예약 불가 */ closed?: [number, number][]; closedLabel?: string };
 export type Placed = { b: Booking; lane: string; s: number; e: number; tag?: string };
 
 type Props = {
@@ -21,6 +22,9 @@ type Props = {
   onSelect: (b: Booking) => void;
   onEmpty: (laneKey: string, min: number) => void;
   onChange: (b: Booking, next: { s: number; e: number; lane: string }) => void;
+  onBlocked?: () => void;
+  /** 보여줄 시간 범위 (시) — 매장 영업시간 기준 */
+  startH: number; endH: number;
 };
 
 const V_HOUR = 64, H_HOUR = 104;
@@ -46,7 +50,7 @@ function layout(items: Placed[]) {
   return out;
 }
 
-export default function Timeline({ lanes, items, orient, compact, nowMin, nowLane, selectedId, canEdit, allowLaneMove, onSelect, onEmpty, onChange }: Props) {
+export default function Timeline({ lanes, items, orient, compact, nowMin, nowLane, selectedId, canEdit, allowLaneMove, onSelect, onEmpty, onChange, onBlocked, startH: START_H, endH: END_H }: Props) {
   const v = orient === "v";
   const unit = v ? V_HOUR : H_HOUR;
   const ppm = unit / 60;
@@ -90,14 +94,21 @@ export default function Timeline({ lanes, items, orient, compact, nowMin, nowLan
     if (!d) return;
     if (!d.moved) { setPreview(null); if (d.mode === "move") onSelect(p.b); return; }
     const pv = preview; setPreview(null);
-    if (pv && (pv.s !== d.s || pv.e !== d.e || pv.lane !== d.lane)) onChange(p.b, pv);
+    if (!pv || (pv.s === d.s && pv.e === d.e && pv.lane === d.lane)) return;
+    // 수동 블록이 아닌 예약은 영업시간 밖으로 못 옮김 → 원위치 + 안내 (서버도 한 번 더 막음)
+    const closed = lanes.find((l) => l.key === pv.lane)?.closed ?? [];
+    if (p.b.status !== "blocked" && closed.some(([a, b]) => pv.s < b && pv.e > a)) { onBlocked?.(); return; }
+    onChange(p.b, pv);
   }
 
   function emptyClick(ev: React.MouseEvent<HTMLDivElement>, lane: Lane) {
     if (!canEdit(lane.key) || lane.off) return;
     const r = ev.currentTarget.getBoundingClientRect();
     const off = v ? ev.clientY - r.top : ev.clientX - r.left;
-    onEmpty(lane.key, Math.min(END_H * 60 - 30, START_H * 60 + Math.floor(off / ppm / 30) * 30));
+    const min = Math.min(END_H * 60 - 30, START_H * 60 + Math.floor(off / ppm / 30) * 30);
+    // 회색(영업시간 밖 · 휴무) 칸은 등록 창을 열지 않음
+    if ((lane.closed ?? []).some(([a, b]) => min >= a && min < b)) return;
+    onEmpty(lane.key, min);
   }
 
   return (
@@ -105,7 +116,14 @@ export default function Timeline({ lanes, items, orient, compact, nowMin, nowLan
       <div className="tl-corner" />
       {/* 시간 눈금 */}
       <div className="tl-scale">
-        {hours.map((h) => <span key={h} style={{ [v ? "top" : "left"]: (h - START_H) * unit }}>{h}:00</span>)}
+        {hours.map((h) => {
+          const hour = h % 12 || 12;
+          return (
+            <span key={h} className="tl-hour" style={{ [v ? "top" : "left"]: (h - START_H) * unit }}>
+              {v ? <><b>{hour}</b><i>{h < 12 ? "AM" : "PM"}</i></> : `${h}:00`}
+            </span>
+          );
+        })}
       </div>
       {lanes.map((l, i) => (
         <div key={`h-${l.key}`} className={`tl-head${l.off ? " off" : ""}${l.today ? " today" : ""}`} style={v ? { gridColumn: i + 2, gridRow: 1 } : { gridRow: i + 2, gridColumn: 1 }}>
@@ -120,6 +138,13 @@ export default function Timeline({ lanes, items, orient, compact, nowMin, nowLan
           className={`tl-lane${l.off ? " off" : ""}${canEdit(l.key) && !l.off ? " editable" : ""}`}
           onClick={(ev) => emptyClick(ev, l)}>
           {hours.map((h) => <i key={h} className="tick" style={{ [v ? "top" : "left"]: (h - START_H) * unit }} />)}
+          {(l.closed ?? []).map(([a, b]) => {
+            const s0 = Math.max(a, START_H * 60), e0 = Math.min(b, END_H * 60);
+            if (e0 <= s0) return null;
+            return <div key={`c${a}`} className="tl-closed" aria-hidden style={v ? { top: (s0 - START_H * 60) * ppm, height: (e0 - s0) * ppm } : { left: (s0 - START_H * 60) * ppm, width: (e0 - s0) * ppm }}>
+              {e0 - s0 >= 60 && <span>{l.closedLabel ?? (a > 0 && b < 1440 ? "브레이크" : "영업시간 외")}</span>}
+            </div>;
+          })}
           {nowMin != null && (nowLane == null || nowLane === l.key) && nowMin >= START_H * 60 && nowMin <= END_H * 60 && (
             <div className="now" style={{ [v ? "top" : "left"]: (nowMin - START_H * 60) * ppm }}><span>{hhmm(nowMin)}</span></div>
           )}
@@ -159,7 +184,7 @@ export default function Timeline({ lanes, items, orient, compact, nowMin, nowLan
               </div>
             );
           })}
-          {l.off && <span className="off-label">휴무</span>}
+          {l.off && !l.closed?.length && <span className="off-label">휴무</span>}
         </div>
       ))}
     </div>

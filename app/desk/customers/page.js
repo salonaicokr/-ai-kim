@@ -16,10 +16,12 @@ export default function CustomersPage() {
     Promise.all([
       supabase.from("v_shop_customers").select("*").eq("shop_id", desk.store.id).order("name"),
       supabase.from("shop_members").select("*").eq("shop_id", desk.store.id),
-    ]).then(([customers, members]) => {
+      supabase.from("shops").select("inflow_sources").eq("id", desk.store.id).single(),
+    ]).then(([customers, members, shop]) => {
       if (!alive) return;
       setReady({
         customers: customers.data ?? [],
+        inflows: shop.data?.inflow_sources ?? ["네이버", "인스타", "지인소개", "지나가다", "기타"],
         designers: (members.data ?? []).filter((member) => member.is_designer || member.role === "owner").map((member) => ({ id: member.id, name: member.display_name })),
       });
     });
@@ -34,6 +36,7 @@ export default function CustomersPage() {
       myMemberId={me}
       initial={ready.customers}
       designers={ready.designers}
+      inflows={ready.inflows}
       canAdd
       canEditAll
       canEditOwn

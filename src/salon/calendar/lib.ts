@@ -4,7 +4,7 @@ export type Status = "requested" | "confirmed" | "in_service" | "completed" | "c
 export type BookingItem = { menu_item_id: string | null; name: string; price: number; kind: MenuKind };
 export type Booking = {
   id: string; designer_id: string; start_at: string; end_at: string; status: Status; source: string; memo: string | null;
-  shop_customer_id: string | null; customer_request: string | null; created_at?: string;
+  shop_customer_id: string | null; customer_request: string | null; created_at?: string; respond_by?: string | null; designer_requested?: boolean;
   items: BookingItem[];
   customer?: { name: string | null; phone: string | null };
   survey?: SurveyLite | null;
@@ -44,8 +44,8 @@ export const addMonths = (ymd: string, n: number) => {
 export const snap = (m: number) => Math.round(m / SNAP) * SNAP;
 
 export const STATUS: Record<Status, { label: string; cls: string; on: boolean }> = {
-  confirmed: { label: "예약중", cls: "st-ok", on: true },
-  requested: { label: "예약대기", cls: "st-req", on: true },
+  confirmed: { label: "확정", cls: "st-ok", on: true },
+  requested: { label: "승인 대기", cls: "st-req", on: true },
   in_service: { label: "시술중", cls: "st-in", on: true },
   completed: { label: "방문완료", cls: "st-done", on: true },
   blocked: { label: "수동 블록", cls: "st-block", on: true },
@@ -58,7 +58,7 @@ export const ACTIVE: Status[] = ["requested", "confirmed", "in_service", "comple
 export const CLOSED: Status[] = ["completed", "cancelled_customer", "cancelled_shop", "no_show"];
 
 export const BOOKING_SELECT =
-  "id, designer_id, start_at, end_at, status, source, memo, customer_request, shop_customer_id, created_at, booking_items(menu_item_id, name, price, menu_items(menu_categories(kind))), pre_surveys(id, status, flags)";
+  "id, designer_id, start_at, end_at, status, source, memo, customer_request, shop_customer_id, created_at, respond_by, designer_requested, booking_items(menu_item_id, name, price, menu_items(menu_categories(kind))), pre_surveys(id, status, flags)";
 
 type RawItem = { menu_item_id: string | null; name: string; price: number; menu_items: { menu_categories: { kind: MenuKind } | null } | null };
 export function normalize(rows: unknown[]): Booking[] {

@@ -73,7 +73,16 @@ export default function Checkout({ supabase, shopId, b, canRecord = false, menus
   const paid = paidStr == null ? calc : Number(paidStr.replace(/[^0-9]/g, "") || 0);
   const overridden = paid !== calc;
   const s = minsOfDay(b.start_at);
-  const designer = designers.find((d) => d.id === b.designer_id)?.name ?? "";
+  // 실제 시술 담당: 예약 담당과 같으면 그대로, 다르면 여기서 바꿈 (Jina님 의견)
+  const [performer, setPerformer] = useState(b.designer_id);
+  const designer = designers.find((d) => d.id === (performer || b.designer_id))?.name ?? "";
+  /** 시술 담당 확인 → 예약 담당을 실제 시술자로 바꿈 (고객 담당 디자이너도 이걸로 자동 입력) */
+  async function confirmPerformer() {
+    if (performer === b.designer_id) return true;
+    const { error } = await supabase.from("bookings").update({ designer_id: performer }).eq("id", b.id);
+    if (error) { setErr(`시술 담당 저장 실패: ${error.message}`); return false; }
+    return true;
+  }
   const shownMenus = useMemo(() => menus.filter((m) => m.cat === cat), [menus, cat]);
 
   function add(m: MenuOpt) {
@@ -131,8 +140,9 @@ export default function Checkout({ supabase, shopId, b, canRecord = false, menus
     if (lines.length === 0) { setErr("시술 내역을 1개 이상 넣어주세요."); return; }
     if (overridden) { setErr("앱 청구는 자동 계산 금액으로만 보낼 수 있어요. 금액을 직접 고쳤다면 매장 결제로 완료해주세요."); return; }
     setBusy(true); setErr(null);
+    if (!(await confirmPerformer())) { setBusy(false); return; }
     const { error } = await supabase.from("payment_requests").insert({
-      shop_id: shopId, booking_id: b.id, shop_customer_id: b.shop_customer_id, designer_id: b.designer_id,
+      shop_id: shopId, booking_id: b.id, shop_customer_id: b.shop_customer_id, designer_id: performer || b.designer_id,
       lines: lines.map((x) => ({ menu_item_id: x.menuId, name: x.len === "base" ? x.name : `${x.name} (기장 ${x.len.toUpperCase()})`, unit_price: unit(x), length_option: x.len, source: x.source })),
       subtotal, points_used: usePts, deposit_applied: cust.deposit, amount: calc, memo: memo.trim() || null,
     });
@@ -150,6 +160,7 @@ export default function Checkout({ supabase, shopId, b, canRecord = false, menus
     if (lines.length === 0) { setErr("시술 내역을 1개 이상 넣어주세요."); return; }
     if (overridden && !reason.trim()) { setErr("결제 금액을 바꿨어요. 바꾼 사유를 골라주세요."); return; }
     setBusy(true); setErr(null);
+    if (!(await confirmPerformer())) { setBusy(false); return; }
     const { error } = await supabase.rpc("complete_checkout", {
       p_booking: b.id,
       p_lines: lines.map((x) => ({ menu_item_id: x.menuId, name: x.len === "base" ? x.name : `${x.name} (기장 ${x.len.toUpperCase()})`, unit_price: unit(x), length_option: x.len, source: x.source })),
@@ -176,7 +187,11 @@ export default function Checkout({ supabase, shopId, b, canRecord = false, menus
         <header className="co-h">
           <h2>완료 · 결제 등록</h2>
           <span className="pill p-gray">{b.customer?.name ?? "고객"} · {mdLabel(ymdOfIso(b.start_at))} {hhmm(s)}</span>
-          <span className="pill p-teal">{designer}</span>
+          <label className={`co-perf${performer !== b.designer_id ? " chg" : ""}`} title="예약 담당과 실제 시술자가 다르면 바꿔주세요"><span className="sm">시술 담당</span>
+            <select id="co-performer" value={performer} onChange={(e) => { setPerformer(e.target.value); setErr(null); }} aria-label="실제 시술 담당 (예약 담당과 다르면 변경)">
+              {designers.map((d) => <option key={d.id} value={d.id}>{d.name}{d.id === b.designer_id ? " (예약 담당)" : ""}</option>)}
+            </select></label>
+          <span className="sm co-perf-note">{performer !== b.designer_id ? "예약 담당에서 바뀌어요" : "예약 담당과 다르면 바꿔주세요"}</span>
           <span className="sp" />
           <button type="button" className="x" aria-label="닫기" onClick={onClose}>×</button>
         </header>

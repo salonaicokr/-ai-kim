@@ -76,3 +76,9 @@
 .co-send input{width:18px;height:18px;margin-top:2px;accent-color:#2A706A}
 .co-send>span{display:flex;flex-direction:column;gap:1px;font-size:13px}
 .co-ai textarea{font-size:13.5px;line-height:1.55;min-height:76px;resize:vertical}
+/* 실제 시술 담당 (예약 담당과 같으면 그대로 · 다르면 바꿈) */
+.co-perf{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--c-primary);background:var(--c-primary-soft);border-radius:999px;padding:3px 4px 3px 12px}
+.co-perf .sm{font-weight:800;color:var(--c-primary)}
+.co-perf select{font:inherit;font-size:13px;font-weight:800;border:0;background:#fff;border-radius:999px;padding:5px 10px;color:var(--c-ink)}
+.co-perf.chg{border-color:#C8421C;background:#FCE9E2}.co-perf.chg .sm{color:#8F2B0D}
+.co-perf-note{color:var(--c-text-sub)}

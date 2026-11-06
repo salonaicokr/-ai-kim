@@ -1,0 +1,69 @@
+/* S-10 매장 현황 패널: 데스크톱 오른쪽 고정 칸 (본문을 덮지 않음) · 1023px 이하 하단 고정 바 */
+.sm-btn{min-height:34px;padding:6px 12px;font-size:12.5px}
+.btn.ghost{border-color:var(--c-border);color:var(--c-ink)}
+.tnum{font-variant-numeric:tabular-nums}
+.nv-badge{display:inline-grid;place-items:center;background:#2F7D4F;color:#fff;font-size:10px;font-weight:900;border-radius:5px;min-width:18px;height:18px;padding:0 3px;flex:none}
+.nv-badge.app{background:#C8421C}
+
+.sp-panel{width:320px;flex:none;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fff;border-left:1px solid var(--c-line);display:flex;flex-direction:column}
+.sp-bar{display:none}
+.sp-body{display:flex;flex-direction:column;gap:12px;padding:20px 16px 24px}
+.sp-title{font-size:16px;font-weight:900;display:flex;align-items:baseline;gap:8px}
+.sp-msg{font-size:12.5px}
+.sp-sec{border:1px solid var(--c-line);border-radius:14px;overflow:hidden;background:#fff}
+.sp-h{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #f1f0ee;font-size:14px}
+.sp-h .pill{margin-left:auto}
+.sp-empty{padding:12px 14px}
+.sp-req{border-color:#F2CB87}
+.sp-req .sp-h{background:#FFF8EA}
+.sp-reqs{list-style:none}
+.sp-reqs li{display:flex;flex-direction:column;gap:4px;padding:10px 14px;border-top:1px solid #f1f0ee}
+.sp-reqs li:first-child{border-top:0}
+.sp-who{display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;font-size:14px}
+.sp-who .sm{margin-left:auto}
+.sp-who .new{font-size:10px;font-weight:900;color:#B42318;background:#FDECEA;border-radius:5px;padding:1px 5px}
+.sp-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-acts{display:flex;gap:6px;justify-content:flex-end}
+.sp-acts .btn{min-height:32px;padding:4px 14px}
+.sp-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:12px 10px;border-bottom:1px solid #f1f0ee;text-align:center}
+.sp-kpi div{display:flex;flex-direction:column;gap:2px}.sp-kpi b{font-size:18px}
+.sp-naver .sp-h .pill{margin-left:auto}
+.sp-naver p{padding:10px 14px 14px}
+
+.st-tabs{display:flex;border-bottom:1px solid var(--c-line)}
+.st-tabs button{flex:1;font:inherit;font-size:11.5px;font-weight:800;padding:9px 2px;border:0;background:#fff;color:var(--c-text-sub);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.st-tabs button.on{color:var(--c-ink);border-bottom-color:var(--c-primary)}
+.st-list{list-style:none;max-height:300px;overflow:auto}
+.st-list li{border-top:1px solid #f1f0ee}.st-list li:first-child{border-top:0}
+.st-list .empty{padding:14px}
+.st-list a{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:9px 14px;color:inherit;text-decoration:none;font-size:13px}
+.st-list a:hover{background:#f7f6f3}
+.st-list .pill{font-size:10px;padding:2px 7px}
+.st-list .pill.st-ok{background:var(--c-primary-soft);color:var(--c-primary)}
+.st-list .pill.st-req{background:#F7EBDD;color:#8A5A2B}
+.st-list .pill.st-in{background:#E3ECF3;color:#2F5D79}
+.st-list .pill.st-done{background:#EFEEEC;color:#6B6F78}
+.st-list .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-list .d{max-width:72px}
+.st-list .t{font-weight:800}
+.st-more{display:block;text-align:right;padding:9px 14px;border-top:1px solid #f1f0ee;color:var(--c-primary);font-weight:800;text-decoration:none}
+
+@media (max-width:1279px){ .sp-panel{width:280px} .sp-body{padding:16px 12px 20px} }
+
+/* 1023px 이하: 하단 탭 위 고정 바 · 기본 접힘 (S-17) */
+@media (max-width:1023px){
+  .sp-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:auto;max-height:none;overflow:visible;border-left:0;background:transparent;z-index:30;padding:0 12px calc(8px + env(safe-area-inset-bottom))}
+  .sp-bar{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;background:var(--c-ink);color:#fff;border-radius:14px;box-shadow:0 8px 24px rgba(22,24,29,.2)}
+  .sp-bar:focus-visible{outline:3px solid var(--c-mint);outline-offset:2px}
+  .sp-nums{display:flex;gap:10px;font-size:12px;color:#cfd2d8;flex:1;justify-content:flex-end;flex-wrap:nowrap}
+  .sp-nums b{color:#fff}.sp-nums .hot b{color:#F2C08A}
+  .chev{color:#9AA0A8;font-size:12px}
+  .sp-body{display:none}
+  .sp-panel.open .sp-body{display:flex;position:absolute;left:12px;right:12px;bottom:calc(100% - 4px);max-height:min(70vh,560px);overflow:auto;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(22,24,29,.18);padding:14px 12px}
+  .sp-title{display:none}
+}
+@media (max-width:767px){
+  .sp-panel{bottom:calc(58px + env(safe-area-inset-bottom));padding-bottom:6px}
+  .sp-bar>b{display:none}
+  .sp-nums{justify-content:space-between;gap:6px;font-size:11.5px}
+}

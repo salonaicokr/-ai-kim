@@ -1,119 +1,68 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { supabase } from "@/src/lib/browser";
+import Settings from "@/src/salon/settings/settings";
+import { createClient } from "@/src/lib/supabase/client";
 import { useDesk } from "@/src/components/DeskFrame";
-import { dbErrorMessage, weekdayRows } from "@/src/lib/format";
+import CustomerInvite from "@/src/salon/settings/customer-invite";
 
 export default function SettingsPage() {
   const desk = useDesk();
-  const [hours, setHours] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState(null);
 
   useEffect(() => {
-    if (!desk?.store) return;
-    supabase.from("store_hours").select("*").eq("store_id", desk.store.id).then(({ data }) => {
-      const order = weekdayRows.map(([id]) => id);
-      setHours((data ?? []).slice().sort((a, b) => order.indexOf(a.weekday) - order.indexOf(b.weekday)));
+    if (!desk?.store) return undefined;
+    const supabase = createClient();
+    const shopId = desk.store.id;
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+    let alive = true;
+    Promise.all([
+      supabase.from("shop_members").select("*").eq("shop_id", shopId).neq("status", "left").order("created_at"),
+      supabase.from("shops").select("name, phone, postcode, address, address_detail, inflow_sources, naver_place_url, naver_place_id, naver_login_id, naver_status").eq("id", shopId).single(),
+      supabase.from("shop_business_hours").select("weekday, is_closed, open_time, close_time, break_start, break_end").eq("shop_id", shopId),
+      supabase.from("shop_holidays").select("id, start_date, end_date, reason").eq("shop_id", shopId).gte("end_date", today).order("start_date"),
+      supabase.from("shop_events").select("id, event_date, title").eq("shop_id", shopId).gte("event_date", today).order("event_date").limit(60),
+      supabase.from("member_offs").select("id, member_id, off_date, kind, memo").eq("shop_id", shopId).gte("off_date", today).order("off_date").limit(100),
+    ]).then(([members, info, hours, holidays, events, offs]) => {
+      if (alive) setState({ members: members.data ?? [], info: info.data, hours: hours.data ?? [], holidays: holidays.data ?? [], events: events.data ?? [], offs: offs.data ?? [] });
     });
-    supabase.from("message_templates").select("code, name, body, audience").eq("audience", "customer").then(({ data }) => {
-      setMessages(data ?? []);
-    });
+    return () => { alive = false; };
   }, [desk?.store]);
 
-  async function saveHours(event) {
-    event.preventDefault();
-    setError("");
-    for (const row of hours) {
-      const { error: updateError } = await supabase
-        .from("store_hours")
-        .update({ opens: row.opens.slice(0, 5), closes: row.closes.slice(0, 5), closed: row.closed })
-        .eq("store_id", desk.store.id)
-        .eq("weekday", row.weekday);
-      if (updateError) {
-        setError(dbErrorMessage(updateError));
-        return;
-      }
-    }
-    await supabase.from("store_setup").update({ hours: true }).eq("store_id", desk.store.id);
-    desk.refresh();
-  }
-
-  async function copyInvite() {
-    const link = `${window.location.origin}/join?code=${desk.store.invite_code}`;
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    await supabase.from("store_setup").update({ staff: true }).eq("store_id", desk.store.id);
-    desk.refresh();
-  }
-
-  async function confirmNotices() {
-    await supabase.from("store_setup").update({ notices: true }).eq("store_id", desk.store.id);
-    desk.refresh();
-  }
-
-  if (!desk?.store) return null;
-  const labels = Object.fromEntries(weekdayRows);
+  if (!desk?.store || !state) return <p className="empty">설정을 불러오는 중입니다.</p>;
+  const store = desk.store;
+  const industries = store.category ? [store.category] : [];
+  const staffUsers = new Set(state.members.filter((member) => member.role === "designer" && member.user_id).map((member) => member.user_id));
+  const people = state.members.filter((member) => !(member.role === "owner" && staffUsers.has(member.user_id)));
+  const admins = people
+    .filter((member) => member.role === "owner" || member.role === "branch_manager" || member.permissions?.settings === "all")
+    .map((member) => ({ id: member.id, name: member.display_name, title: member.title || "", owner: member.role === "owner" }));
+  const info = state.info ?? { name: store.name, phone: null, postcode: null, address: null, address_detail: null };
   return (
     <>
-      <header className="page-head">
-        <div>
-          <h1>설정</h1>
-          <p>{desk.store.address}</p>
-        </div>
-        <Link className="btn" href="/desk/settings/menus">메뉴·가격</Link>
-      </header>
-      {error ? <p className="error">{error}</p> : null}
-      <div className="stack">
-        <form id="hours" className="card" onSubmit={saveHours}>
-          <h3>영업시간</h3>
-          {hours.map((row, index) => (
-            <div className="split" key={row.weekday} style={{ alignItems: "end" }}>
-              <label className="field">{labels[row.weekday]}
-                <input type="time" value={row.opens.slice(0, 5)} disabled={row.closed} onChange={(event) => {
-                  const next = hours.slice();
-                  next[index] = { ...row, opens: event.target.value };
-                  setHours(next);
-                }} />
-              </label>
-              <label className="field">종료
-                <input type="time" value={row.closes.slice(0, 5)} disabled={row.closed} onChange={(event) => {
-                  const next = hours.slice();
-                  next[index] = { ...row, closes: event.target.value };
-                  setHours(next);
-                }} />
-              </label>
-              <label className="field">휴무
-                <input type="checkbox" checked={row.closed} onChange={(event) => {
-                  const next = hours.slice();
-                  next[index] = { ...row, closed: event.target.checked };
-                  setHours(next);
-                }} />
-              </label>
-            </div>
-          ))}
-          <button className="btn primary" type="submit">영업시간 저장</button>
-        </form>
-        <section id="invite" className="card">
-          <h3>디자이너 초대</h3>
-          <p>코드 <b>{desk.store.invite_code}</b></p>
-          <button className="btn" type="button" onClick={copyInvite}>{copied ? "링크를 복사했습니다" : "초대 링크 복사"}</button>
-        </section>
-        <section id="notices" className="card">
-          <h3>알림 문구</h3>
-          <p className="lede">발송은 카카오 계약 뒤에 시작됩니다. 지금은 문구만 확인합니다.</p>
-          {messages.map((item) => (
-            <article key={item.code} style={{ marginBottom: 12 }}>
-              <b>{item.name}</b>
-              <p style={{ whiteSpace: "pre-wrap", color: "var(--muted)" }}>{item.body}</p>
-            </article>
-          ))}
-          <button className="btn" type="button" onClick={confirmNotices}>{desk.setup?.notices ? "확인함" : "문구를 확인했어요"}</button>
-        </section>
-      </div>
+    <CustomerInvite shopId={store.id} shopName={store.name} />
+    <Settings
+      shopId={store.id}
+      shopName={store.name}
+      shopType={store.form}
+      shopStatus={store.status === "approved" ? "active" : store.status}
+      industries={industries}
+      isOwner
+      admins={admins}
+      canPerm
+      info={info}
+      hours={state.hours}
+      holidays={state.holidays}
+      naver={{
+        naver_place_url: info.naver_place_url ?? null,
+        naver_place_id: info.naver_place_id ?? null,
+        naver_login_id: info.naver_login_id ?? null,
+        naver_status: info.naver_status ?? "none",
+      }}
+      members={people.filter((member) => member.status === "active").map((member) => ({ id: member.id, name: member.display_name }))}
+      events={state.events}
+      offs={state.offs}
+    />
     </>
   );
 }

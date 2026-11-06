@@ -173,15 +173,16 @@ export async function loadDesk(supabase, userId) {
     .from("stores")
     .select("*")
     .eq("owner_id", userId)
-    .order("created_at")
-    .limit(1);
+    .order("created_at");
   if (error) throw new Error(dbErrorMessage(error));
-  const store = stores?.[0] ?? null;
-  if (!store) return { store: null, setup: null };
+  let picked = null;
+  try { picked = localStorage.getItem("salonai_shop"); } catch { /* 저장 불가 환경 */ }
+  const store = stores?.find((row) => row.id === picked) ?? stores?.[0] ?? null;
+  if (!store) return { store: null, setup: null, stores: [] };
   const { data: setup } = await supabase
     .from("store_setup")
     .select("*")
     .eq("store_id", store.id)
     .maybeSingle();
-  return { store, setup };
+  return { store, setup, stores };
 }

@@ -9,7 +9,7 @@ import "./record.css";
 
 type SB = ReturnType<typeof createClient>;
 type Kind = "before" | "after";
-type Rec = { id: string; sent_at: string | null; payment_id: string | null };
+type Rec = { id: string; sent_at: string | null; payment_id: string | null; products?: string[] | null; damage_level?: number | null; designer_diagnosis?: string | null; home_care?: string | null };
 type Photo = {
   id: string; kind: Kind; path: string; ai_path: string | null; ai_status: string; ai_engine: string | null; showcase: string; send_to_customer: boolean;
   url?: string; aiUrl?: string;
@@ -177,12 +177,14 @@ export default function TreatmentRecord({ supabase, shopId, b, designerName, can
   const [view, setView] = useState<Photo | null>(null);
   const [upKind, setUpKind] = useState<Kind | null>(null);
   const [removed, setRemoved] = useState(false);
+  const [info, setInfo] = useState({ products: "", damage: "", dx: "", care: "" });
 
   const load = useCallback(async () => {
     const { data: bk } = await supabase.from("bookings").select("customer_record_deleted_at").eq("id", b.id).maybeSingle();
     setRemoved(!!(bk as { customer_record_deleted_at: string | null } | null)?.customer_record_deleted_at);
-    const { data: r } = await supabase.from("treatment_records").select("id, sent_at, payment_id").eq("booking_id", b.id).maybeSingle();
+    const { data: r } = await supabase.from("treatment_records").select("id, sent_at, payment_id, products, damage_level, designer_diagnosis, home_care").eq("booking_id", b.id).maybeSingle();
     setRec((r as Rec | null) ?? null);
+    setInfo({ products: ((r as Rec | null)?.products ?? []).join(", "), damage: String((r as Rec | null)?.damage_level ?? ""), dx: (r as Rec | null)?.designer_diagnosis ?? "", care: (r as Rec | null)?.home_care ?? "" });
     if (!r) { setPhotos([]); return; }
     const { data } = await supabase.from("treatment_photos")
       .select("id, kind, path, ai_path, ai_status, ai_engine, showcase, send_to_customer").eq("record_id", (r as Rec).id).order("created_at");
@@ -218,6 +220,22 @@ export default function TreatmentRecord({ supabase, shopId, b, designerName, can
     await supabase.storage.from(BUCKET).remove([p.path, ...(p.ai_path ? [p.ai_path] : [])]);
     await supabase.from("treatment_photos").delete().eq("id", p.id);
     setView(null);
+    await load();
+  }
+
+  /** 고객 앱에 보여줄 시술 정보 (사용 제품 · 손상도 · 디자이너 진단 · 홈케어) */
+  async function saveInfo() {
+    setBusy("info"); setMsg(null);
+    const r = rec ?? (await ensureRecord(supabase, b, shopId));
+    if (!r) { setBusy(null); setMsg({ kind: "err", text: "시술 기록을 만들지 못했어요." }); return; }
+    const dmg = Number(info.damage);
+    const { error } = await supabase.from("treatment_records").update({
+      products: info.products.split(",").map((x) => x.trim()).filter(Boolean),
+      damage_level: Number.isFinite(dmg) && dmg >= 1 && dmg <= 10 ? Math.round(dmg) : null,
+      designer_diagnosis: info.dx.trim() || null, home_care: info.care.trim() || null,
+    }).eq("id", r.id);
+    setBusy(null);
+    setMsg(error ? { kind: "err", text: `저장 실패: ${error.message}` } : { kind: "ok", text: "시술 정보를 저장했어요. 고객에게 전송하면 앱에서 보여요." });
     await load();
   }
 
@@ -272,6 +290,16 @@ export default function TreatmentRecord({ supabase, shopId, b, designerName, can
 
       {compact && canRecord && (
         <p className="trec-guide sm">📷 촬영 가이드 <b>정면 · 측면 · 뒷면</b> 3장 권장 (애프터 {col("after").length}/3장) · 촬영은 나중에 해도 돼요 — 예약 상세 › 고객 기록에서 언제든 추가할 수 있어요</p>
+      )}
+      {canRecord && !compact && (
+        <div className="trec-info">
+          <span className="lbl">고객 앱에 보여줄 시술 정보</span>
+          <label className="field"><span className="sm">사용 제품 (쉼표로 구분)</span><input className="input" value={info.products} onChange={(e) => setInfo({ ...info, products: e.target.value })} placeholder="예: 염모제 7N, 클리닉 앰플" /></label>
+          <label className="field"><span className="sm">손상도 (1~10)</span><input className="input" inputMode="numeric" value={info.damage} onChange={(e) => setInfo({ ...info, damage: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) })} placeholder="예: 4" /></label>
+          <label className="field"><span className="sm">디자이너 진단</span><textarea className="input" rows={2} value={info.dx} onChange={(e) => setInfo({ ...info, dx: e.target.value })} placeholder="모발 · 두피 상태 한마디" /></label>
+          <label className="field"><span className="sm">홈케어 안내</span><textarea className="input" rows={2} value={info.care} onChange={(e) => setInfo({ ...info, care: e.target.value })} placeholder="집에서 관리하는 방법" /></label>
+          <button type="button" className="btn" disabled={busy != null} onClick={saveInfo}>{busy === "info" ? "저장 중…" : "시술 정보 저장"}</button>
+        </div>
       )}
       {msg && <p className={`msg ${msg.kind}`} role="status">{msg.text}</p>}
       {canRecord && !compact && (

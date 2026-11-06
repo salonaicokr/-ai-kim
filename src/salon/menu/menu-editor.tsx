@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/src/lib/supabase/client";
-import { DURATIONS, HAIR_TEMPLATE, KINDS, kindOf, priceFor, type Category, type Item, type MenuKind } from "@/src/lib/menu";
+import { DURATIONS, EXTENSION_TEMPLATE, HAIR_TEMPLATE, KINDS, kindOf, priceFor, type Category, type Item, type MenuKind } from "@/src/lib/menu";
 import "./menu.css";
 
-type Props = { shopId: string; shopName: string; canEdit: boolean; initialCats: Category[]; initialItems: Item[] };
+type Props = { shopId: string; shopName: string; canEdit: boolean; initialCats: Category[]; initialItems: Item[]; lengthMode: "item" | "extension" };
+/** 분류를 새로 만들 때 고를 수 있는 종류 (기장은 전용 버튼으로만) */
+const PICK_KINDS = KINDS.filter((k) => k.value !== "extension");
 
 const won = (n: number | null) => (n == null ? "" : n.toLocaleString("ko-KR"));
 const fmtMin = (m: number) => (m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ""}`);
@@ -14,7 +16,7 @@ const toInt = (v: string) => {
   return Number.isFinite(n) ? n : null;
 };
 
-export default function MenuEditor({ shopId, shopName, canEdit, initialCats, initialItems }: Props) {
+export default function MenuEditor({ shopId, shopName, canEdit, initialCats, initialItems, lengthMode: initMode }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [cats, setCats] = useState(initialCats);
   const [items, setItems] = useState(initialItems);
@@ -27,6 +29,8 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState(initMode);
+  const extCat = cats.find((c) => c.kind === "extension") ?? null;
 
   const cat = cats.find((c) => c.id === sel) ?? null;
   const itemsOf = (cid: string) => items
@@ -130,6 +134,28 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
     if (!error) setItems(items.filter((i) => i.id !== id));
   }
 
+  /** S-08 기장 분류 추가: 소요시간 0분 · 기장 M/L 옵션(금액만) → 결제 화면은 기장 분류 방식으로 */
+  async function addExtension() {
+    setBusy(true);
+    const { data: c, error } = await supabase.from("menu_categories")
+      .insert({ shop_id: shopId, name: "기장", kind: "extension", default_duration_min: 0, point_earn: true, point_use: true, grade_discount: false, sort_order: (cats.at(-1)?.sort_order ?? 0) + 1 })
+      .select("id, name, kind, point_earn, point_use, grade_discount, default_duration_min, sort_order").single();
+    if (error || !c) { setBusy(false); done(error ?? { message: "분류 생성 실패" }); return; }
+    const { data: its } = await supabase.from("menu_items")
+      .insert(EXTENSION_TEMPLATE.map(([name, price], k) => ({ shop_id: shopId, category_id: c.id, name, price, duration_min: 0, sort_order: k + 1 })))
+      .select("id, category_id, name, price, price_m, price_l, duration_min, status, sort_order");
+    setCats((cs) => [...cs, c as Category]);
+    setItems((is) => [...is, ...((its ?? []) as Item[])]);
+    setSel(c.id); setKindTab("extension");
+    setBusy(false);
+    await changeMode("extension", "기장 분류를 추가했어요. 금액만 고치면 돼요");
+  }
+  async function changeMode(m: "item" | "extension", okText = "기장 금액 방식을 바꿨어요") {
+    const { error } = await supabase.rpc("set_length_mode", { p_shop: shopId, p_mode: m });
+    if (!error) setMode(m);
+    done(error, okText);
+  }
+
   async function loadTemplate() {
     setBusy(true);
     const newCats: Category[] = [];
@@ -161,7 +187,7 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
     <div className="mm-page">
       <div className="row" style={{ flexWrap: "wrap" }}>
         <div>
-          <p className="crumb">설정 · 시술 메뉴 · {shopName}</p>
+          <p className="crumb"><a href="/desk/settings" className="back">← 설정</a> · 시술 메뉴 · {shopName}</p>
           <h1 className="h1">시술 메뉴 등록 및 관리</h1>
         </div>
         <span className="sp" />
@@ -183,6 +209,17 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
           {adding && <AddCatForm {...{ newName, setNewName, newKind, setNewKind, addCat, busy, err: addErr, existing: cats.map((c) => c.name), cancel: () => { setAdding(false); setAddErr(null); } }} />}
         </div>
       ) : (
+        <>
+        {extCat && (
+          <div className="card ext-mode" role="radiogroup" aria-label="기장 금액 방식">
+            <b>기장 금액은 어떻게 받을까요?</b>
+            <label className={mode === "extension" ? "on" : ""}><input type="radio" name="lenmode" checked={mode === "extension"} disabled={ro} onChange={() => changeMode("extension")} />
+              <span><b>기장 분류 옵션</b> <span className="sm">예약 · 결제에서 ‘기장 M · L’을 골라 금액만 더해요 (권장)</span></span></label>
+            <label className={mode === "item" ? "on" : ""}><input type="radio" name="lenmode" checked={mode === "item"} disabled={ro} onChange={() => changeMode("item")} />
+              <span><b>메뉴별 M · L 추가금</b> <span className="sm">메뉴마다 적은 추가금을 결제에서 M · L 로 골라요</span></span></label>
+            <p className="sm">두 번 더해지지 않게 결제 화면에는 고른 방식 하나만 보여요.</p>
+          </div>
+        )}
         <div className="mm">
           {/* ① 1차 분류 */}
           <section className="card mm-l" aria-label="1차 분류">
@@ -203,7 +240,7 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                       <span className="dot" style={{ background: k.color }} />
                       <span style={{ minWidth: 0 }}>
                         <span className="nm">{c.name}</span>
-                        <span className="ds">{k.label} · 메뉴 {n}개 · 기본 {c.default_duration_min}분</span>
+                        <span className="ds">{c.kind === "extension" ? `금액만 · 옵션 ${n}개 · 0분` : `${k.label} · 메뉴 ${n}개 · 기본 ${c.default_duration_min}분`}</span>
                       </span>
                     </button>
                     {!ro && (
@@ -216,6 +253,7 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                 );
               })}
             </ul>
+            {!ro && !extCat && <button type="button" className="btn ghost wide ext-add" disabled={busy} onClick={addExtension}>+ 기장 분류 추가 (M · L 금액만)</button>}
             <p className="lf sm">분류를 누르면 위에서 설정을 바꾸고, 아래 ② 에서 그 분류의 상세메뉴로 이동해요.</p>
           </section>
 
@@ -232,11 +270,16 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                   </label>
                   <label className="fl">
                     <span className="lbl">종류 (캘린더 색 · 통계 기준)</span>
-                    <select className="input" value={cat.kind} disabled={ro}
-                      onChange={(e) => { patchCat(cat.id, { kind: e.target.value as MenuKind }); setKindTab(e.target.value as MenuKind); }}>
-                      {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-                    </select>
+                    {cat.kind === "extension" ? <input className="input" value="기장 (금액만 더함)" disabled /> : (
+                      <select className="input" value={cat.kind} disabled={ro}
+                        onChange={(e) => { patchCat(cat.id, { kind: e.target.value as MenuKind }); setKindTab(e.target.value as MenuKind); }}>
+                        {PICK_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+                      </select>
+                    )}
                   </label>
+                  {cat.kind === "extension" ? (
+                    <div className="fl"><span className="lbl">소요시간</span><p className="ext-note">0분 고정 · 예약 시간은 늘지 않고 <b>금액만</b> 더해져요</p></div>
+                  ) : (
                   <label className="fl">
                     <span className="lbl">기본 소요시간</span>
                     <select className="input" value={cat.default_duration_min} disabled={ro}
@@ -244,6 +287,7 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                       {DURATIONS.map((m) => <option key={m} value={m}>{fmtMin(m)}</option>)}
                     </select>
                   </label>
+                  )}
                 </div>
                 <div className="opts">
                   <Toggle label="포인트 적립" hint="결제 시 적립" on={cat.point_earn} ro={ro} onChange={(v) => patchCat(cat.id, { point_earn: v })} />
@@ -283,9 +327,9 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                               <div className="gh-in">
                                 <span className="dot" style={{ background: kindOf(gc.kind).color }} />
                                 <button type="button" className="gh-name" onClick={() => setSel(gc.id)}>{gc.name}</button>
-                                <span className="sm">{list.length}개 · 기본 {fmtMin(gc.default_duration_min)}</span>
+                                <span className="sm">{list.length}개 · {gc.kind === "extension" ? "금액만 · 0분" : `기본 ${fmtMin(gc.default_duration_min)}`}</span>
                                 <span className="sp" />
-                                {!ro && <button type="button" className="btn sm-btn" onClick={() => addItem(gc.id)}>+ {gc.name} 메뉴 추가</button>}
+                                {!ro && <button type="button" className="btn sm-btn" onClick={() => addItem(gc.id)}>+ {gc.kind === "extension" ? "기장 옵션" : `${gc.name} 메뉴`} 추가</button>}
                               </div>
                             </td>
                           </tr>
@@ -297,10 +341,13 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                               <td className="c-nm"><input aria-label="메뉴 이름" defaultValue={it.name} disabled={ro} maxLength={30}
                                 onBlur={(e) => e.target.value.trim() && e.target.value !== it.name && patchItem(it.id, { name: e.target.value.trim() })} /></td>
                               <NumCell label="결제 금액" cls="pr" value={it.price} ro={ro} onSave={(v) => patchItem(it.id, { price: v ?? 0 })} />
-                              <NumCell label="기장 M 추가금" cls="pm" value={it.price_m} ro={ro} placeholder="+0" plus
+                              {gc.kind === "extension" ? (<><td className="num c-pm na" data-label="기장 M 추가금">—</td><td className="num c-pl na" data-label="기장 L 추가금">—</td></>) : (<>
+                              <NumCell label="기장 M 추가금" cls={`pm${mode === "extension" ? " dim" : ""}`} value={it.price_m} ro={ro} placeholder="+0" plus
                                 total={it.price_m ? priceFor(it, "m") : null} onSave={(v) => patchItem(it.id, { price_m: v || null })} />
-                              <NumCell label="기장 L 추가금" cls="pl" value={it.price_l} ro={ro} placeholder="+0" plus
+                              <NumCell label="기장 L 추가금" cls={`pl${mode === "extension" ? " dim" : ""}`} value={it.price_l} ro={ro} placeholder="+0" plus
                                 total={it.price_l ? priceFor(it, "l") : null} onSave={(v) => patchItem(it.id, { price_l: v || null })} />
+                              </>)}
+                              {gc.kind === "extension" ? <td className="c-du na" data-label="소요시간">0분 고정</td> : (
                               <td className="c-du" data-label="소요시간">
                                 <select aria-label={`${it.name} 소요시간`} value={it.duration_min ?? ""} disabled={ro}
                                   className={it.duration_min == null ? "is-default" : ""}
@@ -309,6 +356,7 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
                                   {DURATIONS.map((m) => <option key={m} value={m}>{fmtMin(m)}</option>)}
                                 </select>
                               </td>
+                              )}
                               <td className="c-st">
                                 <button type="button" disabled={ro} className={`pill st ${it.status === "active" ? "p-teal" : "p-gray"}`}
                                   onClick={() => patchItem(it.id, { status: it.status === "active" ? "paused" : "active" })}>
@@ -329,6 +377,7 @@ export default function MenuEditor({ shopId, shopName, canEdit, initialCats, ini
             </section>
           )}
         </div>
+        </>
       )}
     </div>
   );
@@ -357,7 +406,7 @@ function AddCatForm({ newName, setNewName, newKind, setNewKind, addCat, busy, er
       </label>
       <span className="lbl">종류 (캘린더 색)</span>
       <div className="chips">
-        {KINDS.map((k) => (
+        {PICK_KINDS.map((k) => (
           <button key={k.value} type="button" className={`chip${newKind === k.value ? " on" : ""}`} onClick={() => setNewKind(k.value)}>
             <span className="dot" style={{ background: k.color }} /> {k.label}
           </button>

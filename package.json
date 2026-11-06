@@ -13,13 +13,26 @@
     "supabase:reset": "supabase db reset"
   },
   "devDependencies": {
+    "@types/node": "20.17.6",
+    "@types/react": "19.3.0",
     "supabase": "^2.58.5",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
     "@supabase/supabase-js": "^2.86.0",
+    "@tailwindcss/postcss": "^4.3.4",
+    "animejs": "^4.5.0",
+    "clsx": "^2.1.1",
+    "d3-array": "^3.2.5",
+    "d3-scale": "^4.0.3",
+    "d3-shape": "^3.2.1",
+    "motion": "^14.9.1",
     "next": "^15.5.28",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "read-excel-file": "^9.3.14",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.4"
   }
 }

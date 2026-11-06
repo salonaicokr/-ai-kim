@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./bklit.css";
 
 export const metadata = {
   title: "SALONAI",

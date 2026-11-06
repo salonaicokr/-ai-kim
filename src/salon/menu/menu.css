@@ -131,3 +131,20 @@
 .opts .del{align-self:center}
 @media (max-width:1023px){.opts{grid-template-columns:repeat(3,minmax(0,1fr))}.opts .del{grid-column:1/-1;justify-self:start}}
 @media (max-width:767px){.opts{grid-template-columns:minmax(0,1fr)}}
+
+/* S-08 기장 분류 */
+.ext-add{margin-top:8px;border-style:dashed}
+.ext-note{margin:0;padding:9px 0;font-size:13px;color:var(--c-text-sub)}
+.mt td.na{color:var(--c-muted);font-size:12.5px;text-align:center}
+.mt td.dim input{opacity:.45}
+.ext-mode{display:flex;flex-direction:column;gap:8px}
+.ext-mode label{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--c-border);border-radius:12px;cursor:pointer}
+.ext-mode label.on{border-color:#2A706A;background:#F1F8F6}
+.ext-mode input{margin-top:3px;accent-color:#2A706A}
+.ext-mode label .sm{display:block}
+/* 매장 현황 패널(S-10)로 본문이 좁아져서: 1599px 이하는 ① 분류를 위에 여러 칸으로 */
+@media (max-width:1599px) and (min-width:768px){
+  .mm{grid-template-columns:1fr}
+  .mm-l .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+  .mt td.c-nm{min-width:150px}
+}

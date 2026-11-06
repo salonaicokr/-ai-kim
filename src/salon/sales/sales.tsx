@@ -20,7 +20,7 @@ export default function Sales({ shopId, shopName, scope, canExport, today }: {
   shopId: string; shopName: string; scope: "own" | "all"; myMemberId: string; canExport: boolean; today: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [period, setPeriod] = useState<Period>("week");
+  const [period, setPeriod] = useState<Period>("day"); // S-14 항상 오늘 일별로 시작 (마지막 선택 저장 안 함)
   const [date, setDate] = useState(today);
   const [pays, setPays] = useState<Pay[]>([]);
   const [prevTotal, setPrevTotal] = useState<number | null>(null);

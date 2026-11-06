@@ -1,18 +1,20 @@
 /** 소요시간 선택지 (분) */
 export const DURATIONS = [10, 20, 30, 40, 50, 60, 90, 120, 150, 180, 210, 240, 300, 360];
 
-export type MenuKind = "cut" | "perm" | "heat_perm" | "color" | "clinic" | "dry" | "etc";
+export type MenuKind = "cut" | "perm" | "heat_perm" | "color" | "clinic" | "dry" | "extension" | "etc";
 
 /** 1차 분류 종류: 캘린더 색 · 통계 기준 (S16 · S7 공통)
- *  저채도 유사색 팔레트 (구성원 권한 표와 같은 톤) · bg = 캘린더 블록 바탕 */
+ *  솜사탕 파스텔 팔레트 (컷=라벤더 · 펌=하늘 · 열펌=핑크 · 염색=살구 · 클리닉=민트 · 드라이=레몬) · bg = 캘린더 블록 바탕 */
 export const KINDS: { value: MenuKind; label: string; color: string; bg: string; minutes: number }[] = [
-  { value: "cut", label: "컷", color: "#2A706A", bg: "#E6F1EF", minutes: 60 },
-  { value: "perm", label: "펌", color: "#3E6A84", bg: "#E9F0F4", minutes: 180 },
-  { value: "heat_perm", label: "열펌", color: "#5F5F86", bg: "#EEEEF5", minutes: 180 },
-  { value: "color", label: "염색", color: "#A26A4E", bg: "#F6EEE9", minutes: 120 },
-  { value: "clinic", label: "클리닉", color: "#4D7360", bg: "#EAF1EC", minutes: 60 },
-  { value: "dry", label: "드라이", color: "#857150", bg: "#F3F0E8", minutes: 30 },
-  { value: "etc", label: "기타", color: "#6B6F78", bg: "#F0F0F1", minutes: 60 },
+  { value: "cut", label: "커트", color: "#A58CE0", bg: "#EEE6FF", minutes: 60 },
+  { value: "perm", label: "펌", color: "#7FB2EA", bg: "#E3F0FF", minutes: 180 },
+  { value: "heat_perm", label: "열펌", color: "#EE8FB5", bg: "#FFE4EF", minutes: 180 },
+  { value: "color", label: "염색", color: "#F2A97E", bg: "#FFE8D9", minutes: 120 },
+  { value: "clinic", label: "클리닉", color: "#7CCBB0", bg: "#DFF6EE", minutes: 60 },
+  { value: "dry", label: "드라이", color: "#E8C65C", bg: "#FFF4D2", minutes: 30 },
+  // S-08 기장: 금액만 더함 · 소요시간 0분 고정
+  { value: "extension", label: "기장", color: "#B79AD8", bg: "#F3EAFB", minutes: 0 },
+  { value: "etc", label: "기타", color: "#A9A6B5", bg: "#F1EFF5", minutes: 60 },
 ];
 export const kindOf = (k: string) => KINDS.find((x) => x.value === k) ?? KINDS[KINDS.length - 1];
 
@@ -24,7 +26,10 @@ export const HAIR_TEMPLATE: { name: string; kind: MenuKind; items: [string, numb
   { name: "염색", kind: "color", items: [["전체 염색", 90000], ["뿌리 염색", 60000, 90], ["새치 염색", 55000, 90], ["탈색 1회", 80000]] },
   { name: "클리닉", kind: "clinic", items: [["클리닉", 50000], ["두피 클리닉", 50000]] },
   { name: "드라이", kind: "dry", items: [["드라이", 20000], ["업스타일", 50000, 60]] },
+  { name: "기장", kind: "extension", items: [["기장 M", 10000, 0], ["기장 L", 20000, 0]] },
 ];
+/** 기장 분류 기본 옵션 (기존 매장에서 ‘기장 분류 추가’ 누를 때) */
+export const EXTENSION_TEMPLATE: [string, number][] = [["기장 M", 10000], ["기장 L", 20000]];
 
 /** 네일 기본 메뉴 (업종 네일 가입 시) */
 export const NAIL_TEMPLATE: { name: string; kind: MenuKind; items: [string, number, number?][] }[] = [

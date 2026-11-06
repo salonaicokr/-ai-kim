@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hoursError, hoursWindow, isDayOff, offLabel, openSlots, type Holiday, type HoursRow } from "@/src/lib/hours";
 import type { createClient } from "@/src/lib/supabase/client";
 import { kindOf } from "@/src/lib/menu";
 import {
-  END_H, SNAP, addDays, START_H, STATUS, durLabel, hhmm, kstAt, mdLabel, minsOfDay, ymdOfIso,
+  END_H, SNAP, addDays, START_H, STATUS, durLabel, hhmm, kstAt, mdLabel, minsOfDay, ymdOf, ymdOfIso,
   type Booking, type Designer, type MenuOpt, type Status,
 } from "./lib";
 import TreatmentRecord, { openCamera, uploadPhotos } from "./record";
@@ -52,19 +53,37 @@ function MenuPicker({ menus, picked, setPicked }: { menus: MenuOpt[]; picked: st
   );
 }
 
-function TimeFields({ date, setDate, start, setStart, dur, setDur, autoNote }: {
+type HoursP = { hours: HoursRow[]; holidays: Holiday[] };
+
+/** 날짜 · 시작 · 소요시간. 영업시간을 정했으면 그날 영업 구간의 시각만 고를 수 있어요 (휴무일은 안내) */
+function TimeFields({ date, setDate, start, setStart, dur, setDur, autoNote, hours, holidays, lenient }: {
   date: string; setDate: (v: string) => void; start: number; setStart: (v: number) => void; dur: number; setDur: (v: number) => void; autoNote?: boolean;
-}) {
+  /** lenient: 수동 블록처럼 영업시간 밖도 허용 */ lenient?: boolean;
+} & HoursP) {
+  const slots = lenient ? null : openSlots(date, hours, holidays, SNAP);
+  const off = !lenient && isDayOff(date, hours, holidays);
+  const outside = slots != null && !off && !slots.includes(start);
+  const opts = slots ?? TIMES;
+  // 날짜를 바꾸면 그날 첫 영업 시각으로 맞춤
+  const pickDate = (v: string) => {
+    setDate(v);
+    const s = lenient ? null : openSlots(v, hours, holidays, SNAP);
+    if (s && s.length && !s.includes(start)) setStart(s[0]);
+  };
   return (
     <>
       <div className="two">
         <label className="field"><span className="lbl">날짜</span>
-          <input id="f-date" type="date" className="input" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>
-        <label className="field"><span className="lbl">시작 (10분 단위)</span>
-          <select id="f-start" className="input" value={start} onChange={(e) => setStart(Number(e.target.value))}>
-            {[...new Set([...TIMES, start])].sort((a, b) => a - b).map((t) => <option key={t} value={t}>{hhmm(t)}</option>)}
+          <input id="f-date" type="date" className="input" value={date} onChange={(e) => e.target.value && pickDate(e.target.value)} /></label>
+        <label className="field"><span className="lbl">시작 (10분 단위)
+            {/* S-12 보조: 지금 시각으로 (빈 칸을 눌러 들어오면 그 칸 시각이 기본) */}
+            <button type="button" className="now-btn" onClick={(e) => { e.preventDefault(); const n = new Date(); setDate(ymdOf(n)); setStart(Math.ceil(minsOfDay(n.toISOString()) / SNAP) * SNAP); }}>지금</button></span>
+          <select id="f-start" className="input" value={start} disabled={off} onChange={(e) => setStart(Number(e.target.value))}>
+            {[...new Set([...opts, start])].sort((a, b) => a - b).map((t) => <option key={t} value={t}>{hhmm(t)}{slots && !off && !slots.includes(t) ? " (영업시간 외)" : ""}</option>)}
           </select></label>
       </div>
+      {off && <p className="msg err" role="alert">{mdLabel(date)}은 {offLabel(date, holidays).split(" · ")[0]}이에요. 다른 날짜를 골라주세요.</p>}
+      {outside && <p className="msg err" role="alert">{hhmm(start)}은 영업시간이 아니에요. 영업시간 안의 시각을 골라주세요.</p>}
       <label className="field"><span className="lbl">소요시간 {autoNote && "· 메뉴 기준 자동"}</span>
         <select id="f-dur" className="input" value={dur} onChange={(e) => setDur(Number(e.target.value))}>
           {[...new Set([...DURS, dur])].sort((a, b) => a - b).map((m) => <option key={m} value={m}>{durLabel(m)} ({hhmm(start)}–{hhmm(start + m)})</option>)}
@@ -74,11 +93,13 @@ function TimeFields({ date, setDate, start, setStart, dur, setDur, autoNote }: {
 }
 
 // ---------- 새 예약 ----------
-export function NewBooking({ supabase, shopId, designers, menus, init, onClose, onSaved }: {
-  supabase: SB; shopId: string; designers: Designer[]; menus: MenuOpt[];
+export function NewBooking({ supabase, shopId, designers, menus, hours, holidays, init, onClose, onSaved }: {
+  supabase: SB; shopId: string; designers: Designer[]; menus: MenuOpt[]; hours: HoursRow[]; holidays: Holiday[];
   init: { designer: string; date: string; start: number; customer?: { id: string; name: string }; blocked?: boolean }; onClose: () => void; onSaved: (msg: string, date: string) => void;
 }) {
   const [blocked, setBlocked] = useState(init.blocked ?? false);
+  // 영업시간이 끝난 뒤라 '지금'에 열 수 없어 다음 영업일로 열렸으면 이유를 알려줌 (S-20)
+  const [openedAhead] = useState(() => (init.date !== ymdOf(new Date()) ? { date: init.date, start: init.start } : null));
   const fixed = init.customer ?? null;
   const [name, setName] = useState(fixed?.name ?? "");
   const [phone, setPhone] = useState("");
@@ -94,7 +115,10 @@ export function NewBooking({ supabase, shopId, designers, menus, init, onClose, 
   const [endDate, setEndDate] = useState(init.date);
   const autoDur = picked.reduce((a, id) => a + (menus.find((m) => m.id === id)?.minutes ?? 0), 0);
   const dur = manualDur ?? (autoDur || 60);
-  const dayStart = START_H * 60, dayEnd = END_H * 60;
+  // 종일 블록 = 그날 영업시간 전체 (미설정이면 기본 10~21시)
+  const winOf = (d: string) => { const w = hoursWindow([d], hours, holidays) ?? [START_H, END_H]; return [w[0] * 60, w[1] * 60] as const; };
+  const [dayStart, dayEnd] = winOf(date);
+  const offDay = !blocked && isDayOff(date, hours, holidays);
 
   /** 종일 블록(휴무 · 휴가): 영업 시작 ~ 마감, 끝 날짜까지 하루씩 */
   async function saveAllDay() {
@@ -102,12 +126,14 @@ export function NewBooking({ supabase, shopId, designers, menus, init, onClose, 
     const days: string[] = [];
     for (let d = date; d <= last && days.length < 31; d = addDays(d, 1)) days.push(d);
     for (const d of days) {
-      const st = kstAt(d, dayStart);
+      if (isDayOff(d, hours, holidays)) continue; // 이미 휴무인 날은 건너뜀
+      const [ds, de] = winOf(d);
+      const st = kstAt(d, ds);
       const { error } = await supabase.rpc("create_booking", {
-        p_shop: shopId, p_designer: designer, p_start: st.toISOString(), p_end: kstAt(d, dayEnd).toISOString(),
+        p_shop: shopId, p_designer: designer, p_start: st.toISOString(), p_end: kstAt(d, de).toISOString(),
         p_customer_name: "", p_customer_phone: "", p_items: [], p_memo: memo || "휴무 (종일)", p_source: "manual", p_blocked: true, p_customer_id: null,
       });
-      if (error) return error.message;
+      if (error) return hoursError(error.message);
     }
     onSaved(days.length > 1 ? `${mdLabel(date)}–${mdLabel(last)} ${days.length}일 종일 막았어요` : `${mdLabel(date)} 종일 막았어요`, date);
     return null;
@@ -127,7 +153,7 @@ export function NewBooking({ supabase, shopId, designers, menus, init, onClose, 
       p_customer_id: !blocked && fixed ? fixed.id : null,
     });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(hoursError(error.message)); return; }
     onSaved(blocked ? `${mdLabel(date)} ${hhmm(start)}–${hhmm(start + dur)} 시간을 막았어요` : `${name} 님 예약을 등록했어요 · ${mdLabel(date)} ${hhmm(start)}`, date);
   }
 
@@ -169,20 +195,27 @@ export function NewBooking({ supabase, shopId, designers, menus, init, onClose, 
           <p className="sm">영업시간 {hhmm(dayStart)}–{hhmm(dayEnd)} 전체를 막아요{endDate > date ? ` · ${Math.round((kstAt(endDate, 0).getTime() - kstAt(date, 0).getTime()) / 86_400_000) + 1}일` : ""}.</p>
         </>
       ) : (
-        <TimeFields date={date} setDate={setDate} start={start} setStart={setStart} dur={dur} setDur={setManualDur} autoNote={manualDur == null && autoDur > 0} />
+        <>
+          <TimeFields date={date} setDate={setDate} start={start} setStart={setStart} dur={dur} setDur={setManualDur} autoNote={manualDur == null && autoDur > 0} hours={hours} holidays={holidays} lenient={blocked} />
+          {openedAhead && date === openedAhead.date && !blocked && (
+            <p className="msg ok" role="status">
+              지금은 영업시간이 아니어서 <b>{mdLabel(openedAhead.date)} {hhmm(openedAhead.start)}</b>(으)로 열었어요. 날짜·시각을 바꾸거나 <b>지금</b>을 눌러 현재 시각으로 옮길 수 있어요.
+            </p>
+          )}
+        </>
       )}
       {!blocked && <MenuPicker menus={menus} picked={picked} setPicked={(v) => { setManualDur(null); setPicked(v); }} />}
       <label className="field"><span className="lbl">{blocked ? "사유" : "메모 (선택)"}</span>
         <input id="bk-memo" className="input" value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={60} placeholder={blocked ? (allDay ? "휴가 · 정기 휴무 · 교육" : "전화 예약 · 점심 · 개인 일정") : "요청 사항"} /></label>
       {err && <p className="msg err">{err}</p>}
-      <button className="btn pri" type="submit" disabled={busy}>{busy ? "저장 중…" : blocked ? (allDay ? "종일 막기" : "시간 막기") : "예약 등록"}</button>
+      <button className="btn pri" type="submit" disabled={busy || offDay}>{busy ? "저장 중…" : blocked ? (allDay ? "종일 막기" : "시간 막기") : "예약 등록"}</button>
     </form>
   );
 }
 
-// ---------- 예약 조정 (예약대기 확정 전 · 예약 변경) ----------
-export function EditBooking({ supabase, b, designers, menus, confirming, onClose, onSaved }: {
-  supabase: SB; b: Booking; designers: Designer[]; menus: MenuOpt[]; confirming: boolean;
+// ---------- 예약 조정 (승인 대기 확정 전 · 예약 변경) ----------
+export function EditBooking({ supabase, b, designers, menus, hours, holidays, confirming, onClose, onSaved }: {
+  supabase: SB; b: Booking; designers: Designer[]; menus: MenuOpt[]; hours: HoursRow[]; holidays: Holiday[]; confirming: boolean;
   onClose: () => void; onSaved: (msg: string, date: string) => void;
 }) {
   const s0 = minsOfDay(b.start_at), e0 = minsOfDay(b.end_at);
@@ -214,7 +247,7 @@ export function EditBooking({ supabase, b, designers, menus, confirming, onClose
       if (rows.length) await supabase.from("booking_items").insert(rows);
     }
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(hoursError(error.message)); return; }
     onSaved(`${b.customer?.name ?? "예약"} · ${confirming ? "확정했어요" : "변경했어요"} (${mdLabel(date)} ${hhmm(start)}–${hhmm(start + dur)})`, date);
   }
 
@@ -231,7 +264,7 @@ export function EditBooking({ supabase, b, designers, menus, confirming, onClose
         <select id="e-designer" className="input" value={designer} onChange={(e) => setDesigner(e.target.value)}>
           {designers.map((d) => <option key={d.id} value={d.id}>{d.name} {d.title}</option>)}
         </select></label>
-      <TimeFields date={date} setDate={setDate} start={start} setStart={setStart} dur={dur} setDur={setDur} />
+      <TimeFields date={date} setDate={setDate} start={start} setStart={setStart} dur={dur} setDur={setDur} hours={hours} holidays={holidays} lenient={b.status === "blocked"} />
       <MenuPicker menus={menus} picked={picked} setPicked={(v) => {
         setPicked(v);
         const auto = v.reduce((a, id) => a + (menus.find((m) => m.id === id)?.minutes ?? 0), 0);
@@ -265,7 +298,7 @@ export function Detail({ supabase, shopId, shopName, myMemberId, b, designers, e
   async function cancelClaim() {
     if (!claim) return;
     const { error } = await supabase.from("payment_requests").update({ status: "cancelled" }).eq("id", claim.id);
-    if (error) { onChanged(error.message); return; }
+    if (error) { onChanged(hoursError(error.message)); return; }
     setClaim(null); onChanged("앱 청구를 취소했어요");
   }
   useEffect(() => {
@@ -307,7 +340,8 @@ export function Detail({ supabase, shopId, shopName, myMemberId, b, designers, e
       {b.customer?.phone && <p className="sm tnum">{b.customer.phone}</p>}
       <dl className="dl">
         <div><dt>시간</dt><dd className="tnum">{mdLabel(ymdOfIso(b.start_at))} {hhmm(s)}–{hhmm(e)} · {durLabel(e - s)}</dd></div>
-        <div><dt>담당</dt><dd>{designers.find((d) => d.id === b.designer_id)?.name ?? "-"}</dd></div>
+        <div><dt>담당</dt><dd>{designers.find((d) => d.id === b.designer_id)?.name ?? "-"}{b.designer_requested === false && <span className="sm"> · 고객 지정 없음 (임시 배정 · 다른 분이 시술하면 결제 때 바꿔요)</span>}</dd></div>
+        {b.status === "requested" && b.source === "app" && b.respond_by && <div><dt>확정 기한</dt><dd className="tnum">{hhmm(new Date(b.respond_by).getHours() * 60 + new Date(b.respond_by).getMinutes())}까지 · 지나면 자동 취소돼요</dd></div>}
         {b.items.length > 0 && <div><dt>메뉴</dt><dd>{b.items.map((i, k) => <span key={k} className="mi-row"><span className="sw" style={{ background: kindOf(i.kind).color }} />{i.name} <span className="sm tnum">{i.price.toLocaleString()}원</span></span>)}</dd></div>}
         {total > 0 && <div><dt>예상 금액</dt><dd className="b tnum">{total.toLocaleString()}원</dd></div>}
         {b.customer_request && <div><dt>요청</dt><dd>{b.customer_request}</dd></div>}

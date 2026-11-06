@@ -1,8 +1,9 @@
 import type { Perm } from "@/src/lib/session";
 
-export type Role = "owner" | "vice" | "chief" | "designer" | "desk" | "custom";
+export type Role = "owner" | "branch_manager" | "vice" | "chief" | "designer" | "desk" | "custom";
 
-export const ROLES: { value: Exclude<Role, "owner">; label: string; hint: string }[] = [
+export const ROLES: { value: Exclude<Role, "owner">; label: string; hint: string; ownerOnly?: boolean }[] = [
+  { value: "branch_manager", label: "지점장", hint: "이 지점에서 원장과 같은 권한 · 지점당 1명", ownerOnly: true },
   { value: "vice", label: "부원장", hint: "권한 · 설정 빼고 전부" },
   { value: "chief", label: "실장", hint: "예약 · 고객 전체, 매출 · 환불은 본인" },
   { value: "designer", label: "디자이너", hint: "본인 손님 예약 · 고객 · 결제 · 환불" },

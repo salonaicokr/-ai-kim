@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { motion } from "motion/react";
 import { createClient } from "@/src/lib/supabase/client";
 import { KINDS } from "@/src/lib/menu";
 import Timeline, { type Lane, type Placed } from "./timeline";
+import Agenda from "./agenda";
 import MonthView from "./month";
 import { Detail, EditBooking, NewBooking } from "./forms";
 import Checkout from "./checkout";
+import { closedRanges, hoursError, hoursWindow, isDayOff, nextOpenSlot, offLabel, type Holiday, type HoursRow } from "@/src/lib/hours";
 import {
-  ACTIVE, BOOKING_SELECT, FILTERS, START_H, STATUS, WEEK, addDays, addMonths, dowOf, hhmm, kstAt, kstDate, mdLabel,
+  ACTIVE, BOOKING_SELECT, END_H, FILTERS, START_H, STATUS, WEEK, addDays, addMonths, dowOf, hhmm, kstAt, kstDate, mdLabel,
   minsOfDay, monthStart, normalize, weekStart, ymdOf, ymdOfIso, type Booking, type Designer, type MenuOpt, type Status,
 } from "./lib";
 import "./calendar.css";
@@ -20,6 +23,7 @@ type Props = {
   canViewAll: boolean; canEditAll: boolean; canEditOwn: boolean;
   payPerm: "none" | "own" | "all"; refundPerm: "none" | "own" | "all"; recPerm: "none" | "own" | "all";
   today: string; nowMin: number;
+  hours: HoursRow[]; holidays: Holiday[];
 };
 type View = "day" | "week" | "month";
 
@@ -39,12 +43,54 @@ function useNarrow() {
 
 const STRIP_DAYS = 30;
 
-export default function Calendar({ shopId, shopName, myMemberId, designers, menus, canViewAll, canEditAll, canEditOwn, payPerm, refundPerm, recPerm, today: todayInit, nowMin: nowInit }: Props) {
+function sampleBookings(day: string, designers: Designer[]): Booking[] {
+  if (!designers.length) return [];
+  const at = (delta: number, hm: string, mins: number, status: Status, name: string, menu: string, designerIndex: number): Booking => {
+    const date = addDays(day, delta);
+    const [hour, minute] = hm.split(":").map(Number);
+    const start = hour * 60 + minute;
+    const kind = menu.includes("커트") ? "cut" : menu.includes("펌") ? "perm" : menu.includes("염색") ? "color" : menu.includes("클리닉") ? "clinic" : menu.includes("드라이") ? "dry" : "etc";
+    return {
+      id: `sample-${date}-${hm}`,
+      designer_id: designers[designerIndex % designers.length].id,
+      start_at: kstAt(date, start).toISOString(),
+      end_at: kstAt(date, start + mins).toISOString(),
+      status,
+      source: "phone",
+      memo: null,
+      shop_customer_id: null,
+      customer_request: null,
+      items: [{ menu_item_id: null, name: menu, price: 0, kind }],
+      customer: { name, phone: null },
+    };
+  };
+  const past = "completed" as const;
+  return [
+    at(-3, "11:00", 60, past, "한소희", "커트", 1),
+    at(-3, "15:30", 50, past, "정다은", "클리닉", 0),
+    at(-2, "13:00", 70, past, "배수진", "디지털펌", 2),
+    at(-1, "10:30", 60, past, "오지훈", "커트", 1),
+    at(-1, "16:00", 90, past, "윤아름", "염색", 2),
+    at(0, "10:00", 50, "completed", "최유진", "클리닉", 0),
+    at(0, "11:30", 60, "confirmed", "김서연", "커트", 1),
+    at(0, "14:00", 70, "in_service", "박민지", "디지털펌", 2),
+    at(0, "16:30", 60, "requested", "이하은", "염색", 0),
+    at(1, "11:00", 60, "confirmed", "서민재", "클리닉", 0),
+  ];
+}
+
+export default function Calendar({ shopId, shopName, myMemberId, designers, menus, canViewAll, canEditAll, canEditOwn, payPerm, refundPerm, recPerm, today: todayInit, nowMin: nowInit, hours, holidays }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const narrow = useNarrow();
   const [today, setToday] = useState(todayInit);
   const [nowMin, setNowMin] = useState(nowInit);
   const [date, setDate] = useState(todayInit);
+  const [staff, setStaff] = useState<string>("all");
+  const [slide, setSlide] = useState({ date: todayInit, from: 0 });
+  if (slide.date !== date) {
+    const gap = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${slide.date}T00:00:00Z`)) / 86400000);
+    setSlide({ date, from: Math.max(-3, Math.min(3, gap)) });
+  }
   const [view, setView] = useState<View>("day");
   const [orient, setOrient] = useState<"v" | "h">("v");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -56,6 +102,8 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
   const [checkout, setCheckout] = useState<Booking | null>(null);
   const [mobileCol, setMobileCol] = useState(designers.find((d) => d.id === myMemberId)?.id ?? designers[0]?.id ?? null);
   const [toast, setToast] = useState<string | null>(null);
+  const [swipeHint, setSwipeHint] = useState(false);
+  const hideSwipe = () => { if (swipeHint) { setSwipeHint(false); save("salonai.cal.swipeHint", "1"); } };
 
   // 위젯 · 알림에서 ?b=예약ID 로 들어오면 그 날짜로 가서 예약 열기
   const [openId, setOpenId] = useState<string | null>(null);
@@ -66,8 +114,9 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
     const nw = qs.get("new");
     if (cid || nw) {
       // ?c= 고객 카드에서 · ?new=walkin 현장 등록 · ?new=block 외부 예약 입력(수동 블록)
-      setPanel({ kind: "new", designer: myMemberId, date: todayInit, start: Math.max(START_H * 60, Math.ceil(nowInit / 10) * 10), ...(cid ? { customer: { id: cid, name: cname ?? "고객" } } : {}), ...(nw === "block" ? { blocked: true } : {}) });
-      window.history.replaceState(null, "", "/calendar");
+      const ns = nextOpenSlot(todayInit, nowInit, hours, holidays, addDays) ?? { date: todayInit, start: Math.max(START_H * 60, Math.ceil(nowInit / 10) * 10) };
+      setPanel({ kind: "new", designer: myMemberId, date: ns.date, start: ns.start, ...(cid ? { customer: { id: cid, name: cname ?? "고객" } } : {}), ...(nw === "block" ? { blocked: true } : {}) });
+      window.history.replaceState(null, "", "/desk/bookings");
     }
     const id = qs.get("b");
     if (!id) return;
@@ -75,25 +124,54 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
     supabase.from("bookings").select("start_at").eq("id", id).maybeSingle().then(({ data }) => {
       if (data) { setView("day"); setDate(ymdOfIso(data.start_at as string)); }
     });
-  }, [supabase, myMemberId, todayInit, nowInit]);
+  }, [supabase, myMemberId, todayInit, nowInit, hours, holidays]);
   /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!openId) return;
     const b = bookings.find((x) => x.id === openId);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (b) { setSel(b); setPanel(null); setOpenId(null); window.history.replaceState(null, "", "/calendar"); }
+    if (b) { setSel(b); setPanel(null); setOpenId(null); window.history.replaceState(null, "", "/desk/bookings"); }
   }, [openId, bookings]);
 
   // 화면 설정 기억 (보기 · 방향)
   useEffect(() => {
     const v = store("salonai.cal.view", "day") as View, o = store("salonai.cal.orient", "v") as "v" | "h";
     const linked = new URLSearchParams(window.location.search).has("b");
+    // S-17: 휴대폰은 항상 '일' 보기로 시작 (주 · 월을 골라도 다시 들어오면 일)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!linked) setView(v);
+    if (!linked) setView(window.matchMedia("(max-width: 767px)").matches ? "day" : v);
     setOrient(o);
+    setSwipeHint(store("salonai.cal.swipeHint", "") !== "1");
   }, []);
 
   const cols = canViewAll ? designers : designers.filter((d) => d.id === myMemberId);
+
+  /** 휴대폰·태블릿: 하단 '매장 현황' 바가 캘린더를 덮지 않게 남은 높이에 맞춤 (S-20)
+   *  지점 전환 줄이 있으면 머리 높이가 달라지므로 CSS 고정값 대신 실제 위치로 계산한다. */
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const panel = document.querySelector(".sp-panel") as HTMLElement | null;
+    const fit = () => {
+      if (!window.matchMedia("(max-width: 1023px)").matches) { el.style.maxHeight = ""; return; }
+      const top = el.getBoundingClientRect().top;
+      const limit = panel ? panel.getBoundingClientRect().top : window.innerHeight - 70;
+      el.style.maxHeight = `${Math.max(240, Math.round(limit - top - 8))}px`;
+    };
+    const raf = requestAnimationFrame(fit);
+    window.addEventListener("resize", fit);
+    window.addEventListener("orientationchange", fit);
+    const ro = panel && typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    if (ro && panel) ro.observe(panel);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("orientationchange", fit);
+      ro?.disconnect();
+    };
+  }, [view, date]);
+
   const canEditDesigner = useCallback((id: string) => canEditAll || (canEditOwn && id === myMemberId), [canEditAll, canEditOwn, myMemberId]);
 
   const range = useMemo(() => {
@@ -109,6 +187,13 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
     const { data } = await supabase.from("bookings").select(BOOKING_SELECT).eq("shop_id", shopId)
       .gte("start_at", kstDate(range.from).toISOString()).lt("start_at", kstDate(range.to).toISOString()).order("start_at");
     const rows = normalize(data ?? []);
+    if (!rows.length) {
+      const day = ymdOf(new Date());
+      rows.push(...sampleBookings(day, designers).filter((b) => {
+        const at = ymdOfIso(b.start_at);
+        return at >= range.from && at < range.to;
+      }));
+    }
     const ids = [...new Set(rows.map((r) => r.shop_customer_id).filter(Boolean))] as string[];
     if (ids.length) {
       const { data: cs } = await supabase.from("v_shop_customers").select("id, name, phone").in("id", ids);
@@ -118,16 +203,26 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
     setBookings(rows);
     setSel((s) => (s ? rows.find((r) => r.id === s.id) ?? null : s));
     setLoadedKey(key);
-  }, [supabase, shopId, range, key]);
+  }, [supabase, shopId, range, key, designers]);
 
   const loadCounts = useCallback(async () => {
-    const from = today, to = addDays(today, STRIP_DAYS);
-    const { data } = await supabase.from("bookings").select("start_at, status").eq("shop_id", shopId)
+    const anchor = date < today ? date : today;
+    const end = date > addDays(today, STRIP_DAYS) ? date : addDays(today, STRIP_DAYS);
+    const from = addDays(anchor, -7), to = addDays(end, 7);
+    const { data, error } = await supabase.from("bookings").select("start_at, status").eq("shop_id", shopId)
       .gte("start_at", kstDate(from).toISOString()).lt("start_at", kstDate(to).toISOString()).in("status", ACTIVE);
     const c: Record<string, number> = {};
-    (data ?? []).forEach((b) => { const k = ymdOfIso(b.start_at as string); c[k] = (c[k] ?? 0) + 1; });
+    if (error || !(data ?? []).length) {
+      sampleBookings(ymdOf(new Date()), designers).forEach((b) => {
+        if (b.status === "blocked") return;
+        const k = ymdOfIso(b.start_at);
+        c[k] = (c[k] ?? 0) + 1;
+      });
+    } else {
+      (data ?? []).forEach((b) => { const k = ymdOfIso(b.start_at as string); c[k] = (c[k] ?? 0) + 1; });
+    }
     setCounts(c);
-  }, [supabase, shopId, today]);
+  }, [supabase, shopId, today, date, designers]);
 
   // 범위가 바뀌면 다시 불러오기 (setState 는 응답 뒤에만)
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -148,6 +243,7 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
   }, [supabase, shopId, load, loadCounts]);
 
   const visible = bookings.filter((b) => filters[b.status === "cancelled_shop" ? "cancelled_customer" : b.status]);
+  const pending = bookings.filter((b) => b.status === "requested");
   const countBy = (s: Status) => bookings.filter((b) => (view === "day" ? true : true) && (b.status === s || (s === "cancelled_customer" && b.status === "cancelled_shop"))).length;
 
   function setViewP(v: View) { setView(v); save("salonai.cal.view", v); setSel(null); setPanel(null); }
@@ -157,7 +253,7 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
     setBookings((bs) => bs.map((x) => (x.id === b.id ? { ...x, ...patch } : x)));
     setSel((s) => (s && s.id === b.id ? { ...s, ...patch } : s));
     const { error } = await supabase.from("bookings").update(patch).eq("id", b.id);
-    setToast(error ? `저장 실패: ${error.message}` : msg);
+    setToast(error ? `저장 실패: ${hoursError(error.message)}` : msg);
     load(); loadCounts();
   }
 
@@ -165,19 +261,28 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
   const designerName = (id: string) => designers.find((d) => d.id === id)?.name ?? "";
   let lanes: Lane[] = [], placed: Placed[] = [];
   if (view === "day") {
-    const shown = narrow && orient === "v" ? cols.filter((d) => d.id === mobileCol) : cols;
-    lanes = shown.map((d) => ({ key: d.id, label: d.name, sub: d.title, count: visible.filter((b) => b.designer_id === d.id && b.status !== "blocked").length }));
+    const shown = orient === "v" && staff !== "all" ? cols.filter((d) => d.id === staff) : cols;
+    // 영업시간 밖 · 임시휴무 = 회색 (클릭 · 드래그로 예약 불가) · 휴무일(정기 · 임시)은 하루 전체가 막힌 블록
+    const closed = closedRanges(date, hours, holidays), off = isDayOff(date, hours, holidays);
+    lanes = shown.map((d) => ({ key: d.id, label: d.name, sub: d.title, count: visible.filter((b) => b.designer_id === d.id && b.status !== "blocked").length, closed, closedLabel: off ? offLabel(date, holidays) : undefined }));
     placed = visible.filter((b) => shown.some((d) => d.id === b.designer_id)).map((b) => ({ b, lane: b.designer_id, s: minsOfDay(b.start_at), e: minsOfDay(b.end_at) }));
   } else if (view === "week") {
     const w = weekStart(date);
     lanes = Array.from({ length: 7 }, (_, i) => addDays(w, i)).map((d) => ({
       key: d, label: `${WEEK[dowOf(d)]} ${mdLabel(d)}`, today: d === today,
+      closed: closedRanges(d, hours, holidays), closedLabel: isDayOff(d, hours, holidays) ? offLabel(d, holidays).split(" · ")[0] : undefined,
       count: visible.filter((b) => ymdOfIso(b.start_at) === d && b.status !== "blocked").length,
       onLabel: () => { setDate(d); setViewP("day"); },
     }));
     const mine = canViewAll ? visible : visible.filter((b) => b.designer_id === myMemberId);
     placed = mine.map((b) => ({ b, lane: ymdOfIso(b.start_at), s: minsOfDay(b.start_at), e: minsOfDay(b.end_at), tag: cols.length > 1 ? designerName(b.designer_id) : undefined }));
   }
+
+  // 보여줄 시간 = 설정한 영업시간 (영업시간 밖에 이미 잡힌 예약이 있으면 그만큼 넓힘)
+  const shownDays = view === "week" ? Array.from({ length: 7 }, (_, i) => addDays(weekStart(date), i)) : [date];
+  const win = hoursWindow(shownDays, hours, holidays) ?? [START_H, END_H];
+  const startH = Math.max(0, Math.min(win[0], ...placed.map((p) => Math.floor(p.s / 60))));
+  const endH = Math.min(24, Math.max(win[1], ...placed.map((p) => Math.ceil(p.e / 60))));
 
   function onTimelineChange(b: Booking, n: { s: number; e: number; lane: string }) {
     const day = view === "week" ? n.lane : ymdOfIso(b.start_at);
@@ -187,18 +292,25 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
     patchBooking(b, patch, `${who} → ${mdLabel(day)} ${hhmm(n.s)}–${hhmm(n.e)}${patch.designer_id ? ` · ${designerName(n.lane)}` : ""} 저장했어요`);
   }
 
-  // 날짜 바로가기: 항상 오늘부터 30일 (일 · 주 보기 · PC/태블릿에서만)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(date, i - 3));
   const strip = Array.from({ length: STRIP_DAYS }, (_, i) => addDays(today, i));
+  const dayLook = view === "day";
+  const dayList = dayLook && orient === "v";
+  const monthTitle = `${Number(date.slice(5, 7))}월, ${date.slice(0, 4)}`;
   const title = view === "month" ? `${date.slice(0, 4)}년 ${Number(date.slice(5, 7))}월`
     : view === "week" ? `${mdLabel(weekStart(date))} – ${mdLabel(addDays(weekStart(date), 6))}`
     : `${Number(date.slice(5, 7))}월 ${Number(date.slice(8))}일 (${WEEK[dowOf(date)]})`;
   const step = (n: number) => setDate(view === "month" ? addMonths(date, n) : addDays(date, view === "week" ? 7 * n : n));
-  const pending = bookings.filter((b) => b.status === "requested").sort((a, b) => a.start_at.localeCompare(b.start_at));
   const firstEditable = cols.find((d) => canEditDesigner(d.id))?.id ?? myMemberId;
+
+  const openNew = (start = date === today ? Math.max(START_H * 60, Math.ceil(nowMin / 30) * 30) : 11 * 60) => {
+    setSel(null);
+    setPanel({ kind: "new", designer: mobileCol && canEditDesigner(mobileCol) ? mobileCol : firstEditable, date, start });
+  };
 
   return (
     <div className="cal-page">
-      <div className="cal-head">
+      <div className={dayLook ? "cal-head cal-head-rest" : "cal-head"}>
         <div>
           <p className="crumb">예약 · {canViewAll ? "전체 디자이너" : "내 예약"}</p>
           <h1 className="h1">예약 캘린더</h1>
@@ -219,25 +331,25 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
           <button type="button" role="tab" aria-selected={orient === "v"} className={orient === "v" ? "on" : ""} disabled={view === "month"} onClick={() => setOrientP("v")} title="시간을 세로로">세로형</button>
           <button type="button" role="tab" aria-selected={orient === "h"} className={orient === "h" ? "on" : ""} disabled={view === "month"} onClick={() => setOrientP("h")} title="시간을 가로로">가로형</button>
         </div>
-        {(canEditAll || canEditOwn) && (
-          <button className="btn pri" type="button" onClick={() => { setSel(null); setPanel({ kind: "new", designer: mobileCol && canEditDesigner(mobileCol) ? mobileCol : firstEditable, date, start: date === today ? Math.max(START_H * 60, Math.ceil(nowMin / 30) * 30) : 11 * 60 }); }}>+ 예약 등록</button>
+        {(canEditAll || canEditOwn) && !dayLook && (
+          <button className="btn pri" type="button" onClick={() => openNew()}>+ 예약 등록</button>
         )}
       </div>
 
-      {view !== "month" && (
+      {view !== "month" && !dayLook && (
         <div className="strip" role="tablist" aria-label="날짜 선택">
           {strip.map((d) => {
-            const w = dowOf(d);
+            const w = dowOf(d), off = isDayOff(d, hours, holidays);
             return (
-              <button key={d} type="button" role="tab" aria-selected={d === date} className={`day${d === date ? " on" : ""}${d === today ? " today" : ""}${w === 0 ? " sun" : w === 6 ? " sat" : ""}`} onClick={() => setDate(d)}>
-                <span className="w">{d === today ? "오늘" : WEEK[w]}</span><span className="n">{Number(d.slice(8)) === 1 || d === today ? `${Number(d.slice(5, 7))}/${Number(d.slice(8))}` : Number(d.slice(8))}</span><span className={`c${counts[d] ? "" : " zero"}`}>{counts[d] ?? 0}</span>
+              <button key={d} type="button" role="tab" aria-selected={d === date} className={`day${d === date ? " on" : ""}${d === today ? " today" : ""}${off ? " off" : ""}${w === 0 ? " sun" : w === 6 ? " sat" : ""}`} onClick={() => setDate(d)} title={off ? offLabel(d, holidays) : undefined}>
+                <span className="w">{d === today ? "오늘" : WEEK[w]}</span><span className="n">{Number(d.slice(8)) === 1 || d === today ? `${Number(d.slice(5, 7))}/${Number(d.slice(8))}` : Number(d.slice(8))}</span>{off ? <span className="c offc">휴무{counts[d] ? ` ${counts[d]}` : ""}</span> : <span className={`c${counts[d] ? "" : " zero"}`}>{counts[d] ?? 0}</span>}
               </button>
             );
           })}
         </div>
       )}
 
-      <div className="filters">
+      {!dayLook && <div className="filters">
         {FILTERS.map((s) => (
           <label key={s} className={`fchip${filters[s] ? " on" : ""}`}>
             <input type="checkbox" checked={filters[s]} onChange={(e) => setFilters({ ...filters, [s]: e.target.checked })} />
@@ -245,22 +357,97 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
           </label>
         ))}
         <span className="sp" />
+        {/* 시술 컬러: 칩으로 축약 (S-10) */}
+        <span className="legend-chips" aria-label="시술 컬러">{KINDS.filter((k) => k.value !== "etc").map((k) => <span key={k.value}><i style={{ background: k.color }} />{k.label}</span>)}</span>
         {view !== "month" && <span className="sm hint">빈 칸 누르기 = 예약 등록 · 블록 위/아래 끝 끌기 = 시작/종료 10분 단위 · 블록 끌기 = 옮기기</span>}
-      </div>
+      </div>}
 
-      {view === "day" && narrow && orient === "v" && cols.length > 1 && (
+      {view === "day" && !dayLook && narrow && orient === "v" && cols.length > 1 && (
         <div className="mcols" role="tablist" aria-label="디자이너 선택">
           {cols.map((d) => <button key={d.id} type="button" className={`chip${mobileCol === d.id ? " on" : ""}`} onClick={() => setMobileCol(d.id)}>{d.name}</button>)}
         </div>
       )}
 
       <div className="cal-body">
-        <div className="card grid-card">
+        <div className="cal-main">
+        {dayLook ? (
+          <section className="look">
+            <div className="look-top">
+              <button className="look-month" type="button" onClick={() => setDate(addMonths(date, 1))}>
+                {monthTitle}<span aria-hidden>▾</span>
+              </button>
+              <div className="look-right">
+                <div className="seg look-orient" role="tablist" aria-label="보기 방향">
+                  <button type="button" role="tab" aria-selected={orient === "v"} className={orient === "v" ? "on" : ""} onClick={() => setOrientP("v")} title="직원별 · 세로로 보기">세로형</button>
+                  <button type="button" role="tab" aria-selected={orient === "h"} className={orient === "h" ? "on" : ""} onClick={() => setOrientP("h")} title="모든 디자이너 · 가로로 보기">가로형</button>
+                </div>
+                {(canEditAll || canEditOwn) && (
+                  <button className="look-plus" type="button" aria-label="예약 등록" onClick={() => openNew()}>+</button>
+                )}
+              </div>
+            </div>
+            {orient === "v" && cols.length > 1 ? (
+              <div className="look-staff" role="tablist" aria-label="직원별 예약 보기">
+                <button type="button" role="tab" aria-selected={staff === "all"} className={`staff-chip${staff === "all" ? " on" : ""}`} onClick={() => setStaff("all")}>
+                  전체 <b>{visible.filter((b) => b.status !== "blocked").length}</b>
+                </button>
+                {cols.map((d) => (
+                  <button key={d.id} type="button" role="tab" aria-selected={staff === d.id} className={`staff-chip${staff === d.id ? " on" : ""}`} onClick={() => setStaff(d.id)}>
+                    {d.name} <b>{visible.filter((b) => b.designer_id === d.id && b.status !== "blocked").length}</b>
+                  </button>
+                ))}
+              </div>
+            ) : orient === "h" ? (
+              <p className="look-note sm">모든 디자이너의 예약을 한눈에 볼 수 있어요. 시간은 가로, 디자이너는 세로로 나열돼요.</p>
+            ) : null}
+            <div className="look-weekwrap">
+              <motion.div
+                key={date}
+                className="look-week"
+                role="tablist"
+                aria-label="날짜 선택"
+                initial={{ x: `${(slide.from * 100) / 7}%` }}
+                animate={{ x: "0%" }}
+                transition={{ type: "spring", stiffness: 260, damping: 28 }}
+              >
+                {weekDays.map((d) => {
+                  const n = counts[d] ?? 0;
+                  return (
+                    <button key={d} type="button" role="tab" aria-selected={d === date} className={`look-day${d === date ? " on" : ""}${n ? " has" : ""}`} onClick={() => setDate(d)}>
+                      <span className="w">{WEEK[dowOf(d)]}</span>
+                      <span className="n">{Number(d.slice(8))}</span>
+                      {n > 0 ? <span className="k">{n}</span> : null}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            </div>
+            {dayList && (
+              <Agenda
+                items={placed.map((p) => ({ ...p, tag: cols.length > 1 && staff === "all" ? designerName(p.b.designer_id) : undefined }))}
+                selectedId={sel?.id ?? null}
+                onSelect={(b) => { setPanel(null); setSel(b); }}
+                onEmpty={(min) => openNew(min)}
+              />
+            )}
+            <div className="look-tools">
+              <div className="seg" role="tablist" aria-label="보기 단위">
+                {(["day", "week", "month"] as View[]).map((v) => (
+                  <button key={v} type="button" className={view === v ? "on" : ""} onClick={() => setViewP(v)}>{{ day: "일", week: "주", month: "월" }[v]}</button>
+                ))}
+              </div>
+              <button className="btn ghost sm-btn" type="button" onClick={() => setDate(today)} disabled={date === today}>오늘</button>
+            </div>
+          </section>
+        ) : null}
+        {(!dayLook || orient === "h") && <div className="card grid-card" onScroll={hideSwipe} ref={gridRef}>
+          {/* S-17: 휴대폰 주 보기 · 가로형은 옆으로 넘김 — 처음 한 번만 안내 */}
+          {narrow && swipeHint && (view === "week" || orient === "h") && <div className="swipe-hint" aria-hidden onClick={hideSwipe}><span>옆으로 넘겨 보세요 →</span></div>}
           {view === "month" ? (
-            <MonthView month={monthStart(date)} today={today} sel={date} bookings={visible} onPick={(d) => { setDate(d); setViewP("day"); }} />
+            <MonthView month={monthStart(date)} today={today} sel={date} bookings={visible} offOf={(d) => (isDayOff(d, hours, holidays) ? offLabel(d, holidays).split(" · ")[0] : null)} onPick={(d) => { setDate(d); setViewP("day"); }} />
           ) : (
             <Timeline
-              lanes={lanes} items={placed} orient={orient} compact={view === "week"}
+              lanes={lanes} items={placed} orient={orient} compact={view === "week"} startH={startH} endH={endH}
               nowMin={(view === "day" && date === today) || view === "week" ? nowMin : null}
               nowLane={view === "week" ? today : null}
               selectedId={sel?.id ?? null}
@@ -269,20 +456,22 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
               onSelect={(b) => { setPanel(null); setSel(b); }}
               onEmpty={(lane, min) => { setSel(null); setPanel({ kind: "new", designer: view === "day" ? lane : (mobileCol && canEditDesigner(mobileCol) ? mobileCol : firstEditable), date: view === "day" ? date : lane, start: min }); }}
               onChange={onTimelineChange}
+              onBlocked={() => setToast("영업시간 밖이나 휴무 시간으로는 옮길 수 없어요. 원래 자리로 돌려놨어요.")}
             />
           )}
           {loading && <div className="loading sm">불러오는 중…</div>}
           {!loading && cols.length === 0 && <p className="sm" style={{ padding: 20 }}>예약을 받을 디자이너가 없어요. 구성원 화면에서 디자이너를 초대해주세요.</p>}
+        </div>}
         </div>
 
         <aside className="side-col">
           {panel?.kind === "new" ? (
             <NewBooking key={`${panel.designer}-${panel.date}-${panel.start}`} supabase={supabase} shopId={shopId} designers={cols.filter((d) => canEditDesigner(d.id))}
-              menus={menus} init={panel} onClose={() => setPanel(null)}
+              menus={menus} hours={hours} holidays={holidays} init={panel} onClose={() => setPanel(null)}
               onSaved={(m, d) => { setPanel(null); setToast(m); setDate(d); load(); loadCounts(); }} />
           ) : panel?.kind === "edit" && sel ? (
             <EditBooking key={sel.id + String(panel.confirming)} supabase={supabase} b={sel} designers={cols.filter((d) => canEditDesigner(d.id) || d.id === sel.designer_id)}
-              menus={menus} confirming={panel.confirming} onClose={() => setPanel(null)}
+              menus={menus} hours={hours} holidays={holidays} confirming={panel.confirming} onClose={() => setPanel(null)}
               onSaved={(m, d) => { setPanel(null); setToast(m); setDate(d); load(); loadCounts(); }} />
           ) : sel ? (
             <Detail supabase={supabase} shopId={shopId} shopName={shopName} myMemberId={myMemberId} b={sel} designers={designers} editable={canEditDesigner(sel.designer_id)}
@@ -314,7 +503,7 @@ export default function Calendar({ shopId, shopName, myMemberId, designers, menu
           <div className="card legend">
             <b>시술 컬러</b>
             <ul>{KINDS.filter((k) => k.value !== "etc").map((k) => <li key={k.value}><span className="sw" style={{ background: k.color }} />{k.label}</li>)}</ul>
-            <p className="sm">예약 메뉴의 소요시간만큼 블록이 자동으로 잡혀요. 위 · 아래 끝을 끌어 10분 단위로 조절해요.</p>
+            <p className="sm">고객 예약에서 시술을 고르면 그 시술 색으로 캘린더에 자동 저장돼요. 예약 메뉴의 소요시간만큼 블록이 잡히고, 위 · 아래 끝을 끌어 10분 단위로 조절할 수 있어요.</p>
           </div>
         </aside>
       </div>
