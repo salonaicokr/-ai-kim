@@ -6,3 +6,7 @@ supabase/.temp/
 supabase/.branches/
 dist/
 .next/
+
+*.apk
+mobile/build/
+mobile/.dart_tool/
