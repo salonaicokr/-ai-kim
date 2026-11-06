@@ -1,10 +1,15 @@
 "use client";
 // @ts-nocheck
 
-import { supabase } from "@/src/lib/browser";
+import { createClient } from "@supabase/supabase-js";
 
-/** 고객 앱(/c)은 매장 앱과 같은 Supabase 를 쓰고, 고객 데이터는 c_* 함수로만 읽고 써요. */
-export const sb = supabase;
+/**
+ * 고객 앱(/c)은 매장 앱과 같은 Supabase 프로젝트를 쓰고, 고객 데이터는 c_* 함수로만 읽고 써요.
+ * 로그인 저장 위치(storageKey)를 매장 앱과 분리해서, 같은 브라우저에서 매장 · 고객 계정을 동시에 써도 서로 로그아웃되지 않아요.
+ */
+export const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  auth: { storageKey: "salonai-customer-auth", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
 
 export async function rpc<T = any>(name: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await sb.rpc(name, args);
@@ -87,3 +92,5 @@ export function fmtPhone(s: string) {
   if (d.length < 8) return `${d.slice(0, 3)}-${d.slice(3)}`;
   return `${d.slice(0, 3)}-${d.slice(3, d.length - 4)}-${d.slice(-4)}`;
 }
+
+export { daysSince } from "./care";

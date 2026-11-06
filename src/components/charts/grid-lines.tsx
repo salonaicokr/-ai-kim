@@ -59,7 +59,7 @@ export function gridLinePositions<Value>(
     const mapped = scale(tick);
     const value =
       mapped != null && typeof mapped === "object" ? mapped.valueOf() : mapped;
-    return (value ?? 0) + scaleOffset;
+    return (Number(value ?? 0)) + scaleOffset;
   });
 }
 

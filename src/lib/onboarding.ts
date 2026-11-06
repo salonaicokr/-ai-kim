@@ -104,4 +104,4 @@ export async function submitSignup(input: SignupInput): Promise<{ shopId?: strin
 }
 
 /** 서류 사진 경로: 보관소가 연결되기 전이라 저장할 것이 없어요 */
-export async function saveDocPaths() { /* 연결 전 */ }
+export async function saveDocPaths(_shopId?: string, _paths?: unknown) { /* 연결 전 */ }

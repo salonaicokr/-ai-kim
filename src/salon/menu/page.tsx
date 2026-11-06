@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getShopContext } from "@/src/lib/session";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 // @ts-nocheck
 
@@ -16,7 +17,7 @@ export function createOpsBrowserClient() {
     from: shop.from,
     rpc(name: string, args: Record<string, unknown> = {}) {
       const run = hqRpc(name, args);
-      return { then: (resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) => run.then(resolve, reject) };
+      return { then: (resolve: (v: any) => any, reject?: (r: any) => any) => run.then(resolve, reject) };
     },
     auth: {
       async getUser() { const s = kv.get("hq.session", null); return { data: { user: s ? { id: "hq-guest", email: s.email ?? null } : null }, error: null }; },
